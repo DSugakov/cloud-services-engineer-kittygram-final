@@ -107,6 +107,7 @@ jobs:
           script: |
             cd ~/kittygram/cloud-services-engineer-kittygram-final
             echo "${{ secrets.PRODUCTION_ENV }}" > .env
+            ls -la
             docker-compose -f docker-compose.production.yml pull
             docker-compose -f docker-compose.production.yml up -d --remove-orphans
             docker-compose -f docker-compose.production.yml exec backend python manage.py migrate
@@ -121,4 +122,4 @@ jobs:
         with:
           to: ${{ secrets.TELEGRAM_TO }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
-          message: "Kittygram deployment successful!"
+          message: "Kittygram deployment successful"
