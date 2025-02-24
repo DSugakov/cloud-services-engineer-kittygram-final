@@ -105,12 +105,9 @@ jobs:
           username: ${{ secrets.REMOTE_USER }}
           key: ${{ secrets.REMOTE_SSH_KEY }}
           script: |
-            cd ~/kittygram
-            # Обновляем образы (docker-compose pull использует теги latest)
+            cd ~/kittygram/cloud-services-engineer-kittygram-final
             docker-compose -f docker-compose.production.yml pull
-            # Перезапускаем контейнеры
             docker-compose -f docker-compose.production.yml up -d --remove-orphans
-            # Применяем миграции и собираем статику в контейнере backend
             docker-compose -f docker-compose.production.yml exec backend python manage.py migrate
             docker-compose -f docker-compose.production.yml exec backend python manage.py collectstatic --noinput
 
