@@ -63,17 +63,12 @@ jobs:
           username: ${{ secrets.REMOTE_USER }}
           key: ${{ secrets.REMOTE_SSH_KEY }}
           script: |
+            script: |
             cd ~/kittygram/cloud-services-engineer-kittygram-final
-            # Пример: тянем обновлённые образы, если вы уже пушите их
-            docker compose -f docker-compose.production.yml pull
-
-            # Запускаем контейнеры
-            docker compose -f docker-compose.production.yml up -d --remove-orphans
-
-            # Чтобы избежать "the input device is not a TTY",
-            # используем флаг -T для docker compose exec
-            docker compose -f docker-compose.production.yml exec -T backend python manage.py migrate
-            docker compose -f docker-compose.production.yml exec -T backend python manage.py collectstatic --noinput
+            docker-compose -f docker-compose.production.yml pull
+            docker-compose -f docker-compose.production.yml up -d --remove-orphans
+            docker-compose -f docker-compose.production.yml exec -T backend python manage.py migrate
+            docker-compose -f docker-compose.production.yml exec -T backend python manage.py collectstatic --noinput
 
   notify:
     runs-on: ubuntu-latest
