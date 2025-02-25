@@ -63,7 +63,6 @@ jobs:
           username: ${{ secrets.REMOTE_USER }}
           key: ${{ secrets.REMOTE_SSH_KEY }}
           script: |
-            script: |
             cd ~/kittygram/cloud-services-engineer-kittygram-final
             docker-compose -f docker-compose.production.yml pull
             docker-compose -f docker-compose.production.yml up -d --remove-orphans
