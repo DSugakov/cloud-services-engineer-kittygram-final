@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 
 import defaultImg from "../../images/default-kitty.jpg";
+import { URL } from "../../utils/constants";
 
 import styles from "./main-card.module.css";
 
@@ -21,12 +22,29 @@ export const MainCard = ({
       ? "white"
       : "primary";
 
+  // Функция для формирования правильного URL изображения
+  const getImageUrl = (imageUrl) => {
+    if (!imageUrl) return defaultImg;
+    
+    // Если URL уже начинается с http, проверяем нужно ли добавить порт
+    if (imageUrl.startsWith('http')) {
+      // Заменяем http://localhost на http://localhost:9000
+      if (imageUrl.startsWith('http://localhost/')) {
+        return imageUrl.replace('http://localhost/', 'http://localhost:9000/');
+      }
+      return imageUrl;
+    }
+    
+    // Иначе добавляем базовый URL
+    return `${URL}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+  };
+
   return (
     <article className={`${styles.content} ${extraClass}`}>
       <Link className={styles.link} to={`/cats/${cardId}`}>
         <img
           className={styles.img}
-          src={img ?? defaultImg}
+          src={getImageUrl(img)}
           alt="Фото котика."
         />
       </Link>

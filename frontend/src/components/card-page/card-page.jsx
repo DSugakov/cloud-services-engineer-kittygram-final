@@ -3,6 +3,7 @@ import { useHistory, useParams } from "react-router-dom";
 
 import { deleteCard, getCard } from "../../utils/api";
 import { UserContext } from "../../utils/context";
+import { URL } from "../../utils/constants";
 
 import returnIcon from "../../images/left.svg";
 import editIcon from "../../images/edit.svg";
@@ -62,6 +63,23 @@ export const CardPage = ({ data, setData, extraClass = "" }) => {
       ? "white"
       : "primary";
 
+  // Функция для формирования правильного URL изображения
+  const getImageUrl = (imageUrl) => {
+    if (!imageUrl) return defaultImg;
+    
+    // Если URL уже начинается с http, проверяем нужно ли добавить порт
+    if (imageUrl.startsWith('http')) {
+      // Заменяем http://localhost на http://localhost:9000
+      if (imageUrl.startsWith('http://localhost/')) {
+        return imageUrl.replace('http://localhost/', 'http://localhost:9000/');
+      }
+      return imageUrl;
+    }
+    
+    // Иначе добавляем базовый URL
+    return `${URL}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+  };
+
   return (
     <article className={`${styles.content} ${extraClass}`}>
       <div className={styles.container}>
@@ -89,7 +107,7 @@ export const CardPage = ({ data, setData, extraClass = "" }) => {
         <div className={styles.img_box}>
           <img
             className={styles.img}
-            src={data.image ?? defaultImg}
+            src={getImageUrl(data.image)}
             alt="Фото котика."
           />
         </div>
