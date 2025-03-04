@@ -89,10 +89,26 @@ jobs:
           username: ${{ secrets.REMOTE_USER }}
           key: ${{ secrets.REMOTE_SSH_KEY }}
           script: |
-            cd ~/kittygram/cloud-services-engineer-kittygram-final
-
+            cd ~/cloud-services-engineer-kittygram-final/
+            
+            # Создаем .env файл
+            echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" > .env
+            echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
+            echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> .env
+            echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
+            echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
+            echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
+            echo "DEBUG=${{ secrets.DEBUG }}" >> .env
+            echo "ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}" >> .env
+            
+            # Скачиваем docker-compose.production.yml
+            wget https://raw.githubusercontent.com/${{ github.repository }}/main/docker-compose.production.yml -O docker-compose.production.yml
+            
+            # Запускаем контейнеры
             docker-compose -f docker-compose.production.yml pull
             docker-compose -f docker-compose.production.yml up -d --remove-orphans
+            
+            # Выполняем миграции и собираем статику
             docker-compose -f docker-compose.production.yml exec -T backend python manage.py migrate
             docker-compose -f docker-compose.production.yml exec -T backend python manage.py collectstatic --noinput
 
