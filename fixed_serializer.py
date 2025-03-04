@@ -1,0 +1,1 @@
+def to_representation(self, instance): representation = super().to_representation(instance); if representation["image"]: if instance.image: representation["image"] = "/media/" + str(instance.image); return representation
