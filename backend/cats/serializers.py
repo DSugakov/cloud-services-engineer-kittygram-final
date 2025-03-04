@@ -4,7 +4,6 @@ import datetime as dt
 import webcolors
 from django.core.files.base import ContentFile
 from rest_framework import serializers
-from django.conf import settings
 
 from .models import Achievement, AchievementCat, Cat
 
@@ -68,7 +67,7 @@ class CatSerializer(serializers.ModelSerializer):
         if representation['image']:
             # Заменяем относительный путь на абсолютный URL
             if instance.image:
-                representation['image'] = 'http://localhost:9000/media/' + str(instance.image)
+                representation['image'] = '/media/' + str(instance.image)
         return representation
 
     def create(self, validated_data):
