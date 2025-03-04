@@ -1,4 +1,4 @@
-FROM node:18
+FROM node:18-alpine as build
 WORKDIR /app
 
 COPY package.json package.json
@@ -9,4 +9,6 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-CMD ["cp", "-r", "/app/build/.", "/app/result_build/"]
+FROM nginx:1.19
+COPY --from=build /app/build /usr/share/nginx/html
+COPY nginx/default.conf /etc/nginx/conf.d/default.conf
