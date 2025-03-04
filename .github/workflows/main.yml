@@ -89,7 +89,7 @@ jobs:
           username: ${{ secrets.REMOTE_USER }}
           key: ${{ secrets.REMOTE_SSH_KEY }}
           script: |
-            cd ~/kittygram/
+            cd ~/cloud-services-engineer-kittygram-final/
             
             # Создаем .env файл
             echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" > .env
