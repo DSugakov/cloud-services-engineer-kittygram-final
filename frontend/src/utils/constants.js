@@ -1,4 +1,4 @@
-export const URL = "";
+export const URL = window.location.origin;
 
 export const colorsList = [
   "#FFE4C4",
