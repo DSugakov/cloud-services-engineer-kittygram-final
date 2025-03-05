@@ -47,6 +47,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        
+      - name: Generate build ID
+        id: build-id
+        run: |
+          echo "BUILD_ID=${{ github.run_number }}" >> $GITHUB_ENV
+          echo "TIMESTAMP=$(date +%Y%m%d%H%M%S)" >> $GITHUB_ENV
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -62,55 +68,112 @@ jobs:
         with:
           context: ./backend
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/kittygram_backend:latest
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/kittygram_backend:latest
+            ${{ secrets.DOCKER_USERNAME }}/kittygram_backend:build-${{ env.BUILD_ID }}
 
       - name: Build and push frontend image
         uses: docker/build-push-action@v4
         with:
           context: ./frontend
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/kittygram_frontend:latest
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/kittygram_frontend:latest
+            ${{ secrets.DOCKER_USERNAME }}/kittygram_frontend:build-${{ env.BUILD_ID }}
 
       - name: Build and push gateway image
         uses: docker/build-push-action@v4
         with:
           context: ./nginx
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/kittygram_gateway:latest
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/kittygram_gateway:latest
+            ${{ secrets.DOCKER_USERNAME }}/kittygram_gateway:build-${{ env.BUILD_ID }}
 
   deploy:
     runs-on: ubuntu-latest
     needs: [build_and_push]
     steps:
-      - name: Deploy to remote server via SSH
-        uses: appleboy/ssh-action@master
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up SSH key
+        uses: webfactory/ssh-agent@v0.9.0
         with:
-          host: ${{ secrets.REMOTE_HOST }}
-          username: ${{ secrets.REMOTE_USER }}
-          key: ${{ secrets.REMOTE_SSH_KEY }}
-          script: |
-            cd ~/cloud-services-engineer-kittygram-final/
-            
-            # Создаем .env файл
-            echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" > .env
-            echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
-            echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> .env
-            echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
-            echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
-            echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
-            echo "DEBUG=${{ secrets.DEBUG }}" >> .env
-            echo "ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}" >> .env
-            
-            # Скачиваем docker-compose.production.yml
-            wget https://raw.githubusercontent.com/${{ github.repository }}/main/docker-compose.production.yml -O docker-compose.production.yml
-            
-            # Запускаем контейнеры
-            docker-compose -f docker-compose.production.yml pull
-            docker-compose -f docker-compose.production.yml up -d --remove-orphans
-            
-            # Выполняем миграции и собираем статику
-            docker-compose -f docker-compose.production.yml exec -T backend python manage.py migrate
-            docker-compose -f docker-compose.production.yml exec -T backend python manage.py collectstatic --noinput
+          ssh-private-key: ${{ secrets.REMOTE_SSH_KEY }}
+
+      - name: Add host key to known_hosts
+        run: |
+          ssh-keyscan -H ${{ secrets.REMOTE_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Test SSH connection
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "echo 'SSH connection successful'"
+
+      - name: Deploy to server
+        run: |
+          # Создание переменных для SSH и SCP команд
+          SSH_CMD="ssh -o StrictHostKeyChecking=no ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}"
+          SCP_CMD="scp -o StrictHostKeyChecking=no"
+          
+          echo "Создание директории проекта..."
+          $SSH_CMD "mkdir -p ~/cloud-services-engineer-kittygram-final/"
+          echo "Директория создана"
+          
+          echo "Создание .env файла..."
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'POSTGRES_USER=${{ secrets.POSTGRES_USER }}' > .env"
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}' >> .env"
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'POSTGRES_DB=${{ secrets.POSTGRES_DB }}' >> .env"
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'DB_HOST=${{ secrets.DB_HOST }}' >> .env"
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'DB_PORT=${{ secrets.DB_PORT }}' >> .env"
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'SECRET_KEY=${{ secrets.SECRET_KEY }}' >> .env"
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'DEBUG=${{ secrets.DEBUG }}' >> .env"
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}' >> .env"
+          echo ".env файл создан"
+          
+          echo "Сохранение информации о версии..."
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'BUILD_ID=${{ github.run_number }}' > .build_info"
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'DEPLOY_DATE=$(date)' >> .build_info"
+          
+          echo "Копирование docker-compose.production.yml..."
+          $SCP_CMD docker-compose.production.yml ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:~/cloud-services-engineer-kittygram-final/docker-compose.production.yml
+          echo "Файл скопирован"
+          
+          echo "Запуск docker-compose pull..."
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml pull"
+          echo "Pull завершен"
+          
+          echo "Запуск контейнера postgres..."
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml up -d postgres"
+          echo "Postgres запущен"
+          
+          echo "Запуск контейнера backend..."
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml up -d backend"
+          echo "Backend запущен"
+          
+          echo "Запуск контейнера frontend..."
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml up -d frontend"
+          echo "Frontend запущен"
+          
+          echo "Запуск контейнера gateway..."
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml up -d gateway"
+          echo "Gateway запущен"
+          
+          echo "Применение миграций..."
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml exec -T backend python manage.py migrate"
+          echo "Миграции применены"
+          
+          echo "Сбор статики..."
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml exec -T backend python manage.py collectstatic --noinput"
+          echo "Статика собрана"
+          
+          echo "Очистка неиспользуемых Docker образов..."
+          $SSH_CMD "docker image prune -a -f --filter 'until=24h'"
+          echo "Очистка завершена"
+          
+          echo "Проверка статуса контейнеров..."
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml ps"
+          echo "Развертывание завершено успешно"
 
   notify:
     runs-on: ubuntu-latest
@@ -121,4 +184,9 @@ jobs:
         with:
           to: ${{ secrets.TELEGRAM_TO }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
-          message: "Kittygram deployment successful!"
+          message: |
+            🚀 Kittygram deployment successful!
+            Build ID: ${{ github.run_number }}
+            Commit: ${{ github.sha }}
+            Repository: ${{ github.repository }}
+            Deployed by: ${{ github.actor }}
