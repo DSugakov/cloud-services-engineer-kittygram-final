@@ -85,19 +85,43 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Install SSH client
+        run: |
+          apt-get update
+          apt-get install -y openssh-client
+          mkdir -p ~/.ssh
+
       - name: Set up SSH
         run: |
-          mkdir -p ~/.ssh
+          echo "Настройка SSH ключа..."
           echo "${{ secrets.REMOTE_SSH_KEY }}" | base64 -d > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.REMOTE_HOST }} >> ~/.ssh/known_hosts
+          echo "SSH ключ настроен. Содержимое known_hosts:"
+          cat ~/.ssh/known_hosts
+
+      - name: Debug SSH setup
+        run: |
+          ls -la ~/.ssh/
+          file ~/.ssh/deploy_key
+          echo "Проверка формата ключа:"
+          cat ~/.ssh/deploy_key | head -n 2
+
+      - name: Simple SSH test
+        run: |
+          set -ex
+          ssh -v -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "hostname && whoami && echo 'Тестовое соединение успешно'"
 
       - name: Deploy to server
         run: |
           SSH_KEY="~/.ssh/deploy_key"
-          SSH_CMD="ssh -i $SSH_KEY -o StrictHostKeyChecking=no ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}"
-          SCP_CMD="scp -i $SSH_KEY -o StrictHostKeyChecking=no"
+          SSH_CMD="ssh -v -i $SSH_KEY -o StrictHostKeyChecking=no ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}"
+          SCP_CMD="scp -v -i $SSH_KEY -o StrictHostKeyChecking=no"
           
+          echo "Выполняем простую команду для проверки..."
+          $SSH_CMD "echo 'SSH connection test'"
+          
+          echo "Проверка наличия Docker..."
           $SSH_CMD "if ! command -v docker &> /dev/null; then
             echo 'Docker не установлен. Устанавливаем...'
             sudo apt-get update
@@ -111,7 +135,9 @@ jobs:
           else
             echo 'Docker уже установлен'
           fi"
+          echo "Проверка Docker завершена"
           
+          echo "Проверка наличия Docker Compose..."
           $SSH_CMD "if ! command -v docker-compose &> /dev/null; then
             echo 'Docker Compose не установлен. Устанавливаем...'
             sudo curl -L \"https://github.com/docker/compose/releases/download/1.29.2/docker-compose-\$(uname -s)-\$(uname -m)\" -o /usr/local/bin/docker-compose
@@ -120,29 +146,61 @@ jobs:
           else
             echo 'Docker Compose уже установлен'
           fi"
+          echo "Проверка Docker Compose завершена"
           
+          echo "Создание директории проекта..."
           $SSH_CMD "mkdir -p ~/cloud-services-engineer-kittygram-final/"
+          echo "Директория создана"
           
-          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && \
-            echo 'POSTGRES_USER=${{ secrets.POSTGRES_USER }}' > .env && \
-            echo 'POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}' >> .env && \
-            echo 'POSTGRES_DB=${{ secrets.POSTGRES_DB }}' >> .env && \
-            echo 'DB_HOST=${{ secrets.DB_HOST }}' >> .env && \
-            echo 'DB_PORT=${{ secrets.DB_PORT }}' >> .env && \
-            echo 'SECRET_KEY=${{ secrets.SECRET_KEY }}' >> .env && \
-            echo 'DEBUG=${{ secrets.DEBUG }}' >> .env && \
-            echo 'ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}' >> .env"
+          echo "Создание .env файла..."
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'POSTGRES_USER=${{ secrets.POSTGRES_USER }}' > .env"
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}' >> .env"
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'POSTGRES_DB=${{ secrets.POSTGRES_DB }}' >> .env"
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'DB_HOST=${{ secrets.DB_HOST }}' >> .env"
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'DB_PORT=${{ secrets.DB_PORT }}' >> .env"
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'SECRET_KEY=${{ secrets.SECRET_KEY }}' >> .env"
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'DEBUG=${{ secrets.DEBUG }}' >> .env"
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}' >> .env"
+          echo ".env файл создан"
           
+          echo "Копирование docker-compose.production.yml..."
           $SCP_CMD docker-compose.production.yml ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:~/cloud-services-engineer-kittygram-final/docker-compose.production.yml
+          echo "Файл скопирован"
           
-          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && \
-            docker-compose -f docker-compose.production.yml pull && \
-            docker-compose -f docker-compose.production.yml up -d postgres && \
-            docker-compose -f docker-compose.production.yml up -d backend && \
-            docker-compose -f docker-compose.production.yml up -d frontend && \
-            docker-compose -f docker-compose.production.yml up -d gateway && \
-            docker-compose -f docker-compose.production.yml exec -T backend python manage.py migrate && \
-            docker-compose -f docker-compose.production.yml exec -T backend python manage.py collectstatic --noinput"
+          echo "Проверка версии docker-compose..."
+          $SSH_CMD "docker-compose --version"
+          
+          echo "Запуск docker-compose pull..."
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml pull"
+          echo "Pull завершен"
+          
+          echo "Запуск контейнера postgres..."
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml up -d postgres"
+          echo "Postgres запущен"
+          
+          echo "Запуск контейнера backend..."
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml up -d backend"
+          echo "Backend запущен"
+          
+          echo "Запуск контейнера frontend..."
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml up -d frontend"
+          echo "Frontend запущен"
+          
+          echo "Запуск контейнера gateway..."
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml up -d gateway"
+          echo "Gateway запущен"
+          
+          echo "Применение миграций..."
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml exec -T backend python manage.py migrate"
+          echo "Миграции применены"
+          
+          echo "Сбор статики..."
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml exec -T backend python manage.py collectstatic --noinput"
+          echo "Статика собрана"
+          
+          echo "Проверка статуса контейнеров..."
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml ps"
+          echo "Развертывание завершено успешно"
 
   notify:
     runs-on: ubuntu-latest
