@@ -97,22 +97,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.REMOTE_SSH_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.REMOTE_HOST }} >> ~/.ssh/known_hosts
-          
-      - name: Test SSH connection
-        run: ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "echo SSH connection successful"
-
-      - name: Create project directory
-        run: ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "mkdir -p ~/cloud-services-engineer-kittygram-final/"
-
       - name: Create .env file
         run: |
-          ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "cat > ~/cloud-services-engineer-kittygram-final/.env << 'EOL'
+          cat > .env << 'EOL'
           POSTGRES_USER=${{ secrets.POSTGRES_USER }}
           POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
           POSTGRES_DB=${{ secrets.POSTGRES_DB }}
@@ -121,35 +108,52 @@ jobs:
           SECRET_KEY=${{ secrets.SECRET_KEY }}
           DEBUG=${{ secrets.DEBUG }}
           ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}
-          EOL"
-
+          EOL
+    
       - name: Create build info file
         run: |
-          ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "cat > ~/cloud-services-engineer-kittygram-final/.build_info << 'EOL'
+          cat > .build_info << 'EOL'
           BUILD_ID=${{ github.run_number }}
           DEPLOY_DATE=$(date)
-          EOL"
+          EOL
 
-      - name: Copy docker-compose file
-        run: scp docker-compose.production.yml ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:~/cloud-services-engineer-kittygram-final/
+      - name: Deploy to server via SSH
+        uses: easingthemes/ssh-deploy@main
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.REMOTE_SSH_KEY }}
+          ARGS: "-rlgoDzvc -i"
+          SOURCE: ".env,.build_info,docker-compose.production.yml"
+          REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
+          REMOTE_USER: ${{ secrets.REMOTE_USER }}
+          TARGET: "~/cloud-services-engineer-kittygram-final/"
+          EXCLUDE: ".git/,.github/,.gitignore"
 
-      - name: Pull Docker images
-        run: ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml pull"
-
-      - name: Start containers
-        run: ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml up -d"
-
-      - name: Apply migrations
-        run: ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml exec -T backend python manage.py migrate"
-
-      - name: Collect static
-        run: ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml exec -T backend python manage.py collectstatic --noinput"
-
-      - name: Clean old images
-        run: ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "docker image prune -a -f --filter 'until=24h'"
-
-      - name: Check container status
-        run: ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml ps"
+      - name: Execute remote commands
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.REMOTE_SSH_KEY }}
+          script: |
+            cd ~/cloud-services-engineer-kittygram-final/
+            
+            echo "Запуск docker-compose pull..."
+            docker-compose -f docker-compose.production.yml pull
+            
+            echo "Запуск контейнеров..."
+            docker-compose -f docker-compose.production.yml up -d
+            
+            echo "Применение миграций..."
+            docker-compose -f docker-compose.production.yml exec -T backend python manage.py migrate
+            
+            echo "Сбор статики..."
+            docker-compose -f docker-compose.production.yml exec -T backend python manage.py collectstatic --noinput
+            
+            echo "Очистка неиспользуемых Docker образов..."
+            docker image prune -a -f --filter "until=24h"
+            
+            echo "Проверка статуса контейнеров..."
+            docker-compose -f docker-compose.production.yml ps
 
   notify:
     runs-on: ubuntu-latest
