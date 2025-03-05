@@ -150,23 +150,29 @@ jobs:
           echo "DEBUG=${{ secrets.DEBUG }}" >> .env
           echo "ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}" >> .env
           echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> .env
-      - name: Copy files via ssh
-        uses: appleboy/scp-action@master
+      
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
         with:
-          host: ${{ secrets.REMOTE_HOST }}
-          username: ${{ secrets.REMOTE_USER }}
           key: ${{ secrets.REMOTE_SSH_KEY }}
-          passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          source: "docker-compose.production.yml,.build_info,.env"
-          target: "/home/kittygram"
-      - name: Executing remote ssh commands to deploy
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.REMOTE_HOST }}
-          username: ${{ secrets.REMOTE_USER }}
-          key: ${{ secrets.REMOTE_SSH_KEY }}
-          passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          script: |
+          name: id_rsa
+          known_hosts: ${{ secrets.REMOTE_HOST }}
+          if_key_exists: replace
+          
+      - name: Setup SSH and known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.REMOTE_HOST }} >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_rsa
+          echo "SSH ключ и known_hosts установлены."
+      
+      - name: Copy files to server
+        run: |
+          scp -v docker-compose.production.yml .build_info .env ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/home/kittygram/
+          
+      - name: Deploy on server
+        run: |
+          ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} << 'EOF'
             echo "Очистка системы..."
             sudo docker system prune -af
             sudo npm cache clean --force
@@ -188,6 +194,7 @@ jobs:
             
             echo "Сохранение информации о сборке..."
             cat .build_info
+          EOF
 
   send_message:
     runs-on: ubuntu-latest
@@ -198,4 +205,9 @@ jobs:
         with:
           to: ${{ secrets.TELEGRAM_TO }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
-          message: "OK"
+          message: |
+            🚀 Деплой проекта "cloud-services-engineer-kittygram-final" успешно завершен!
+            
+            Сборка: #${{ github.run_number }}
+            Пользователь: ${{ github.actor }}
+            Ссылка на коммит: https://github.com/${{ github.repository }}/commit/${{ github.sha }}
