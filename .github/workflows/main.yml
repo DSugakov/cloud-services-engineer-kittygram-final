@@ -91,23 +91,53 @@ jobs:
           echo "Host: ${{ secrets.REMOTE_HOST }}"
           echo "User: ${{ secrets.REMOTE_USER }}"
           echo "Key length check: ${{ secrets.REMOTE_SSH_KEY != '' && 'OK' || 'EMPTY' }}"
+          
+      - name: Check SSH key format
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.REMOTE_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          
+          # Проверка формата ключа
+          echo "Проверка формата SSH-ключа:"
+          if grep -q "BEGIN OPENSSH PRIVATE KEY" ~/.ssh/deploy_key && grep -q "END OPENSSH PRIVATE KEY" ~/.ssh/deploy_key; then
+            echo "✅ Ключ имеет правильный формат OpenSSH"
+          elif grep -q "BEGIN RSA PRIVATE KEY" ~/.ssh/deploy_key && grep -q "END RSA PRIVATE KEY" ~/.ssh/deploy_key; then
+            echo "✅ Ключ имеет правильный формат RSA"
+          else
+            echo "❌ Ключ имеет неправильный формат, проверьте секрет REMOTE_SSH_KEY"
+            echo "Первые 20 символов ключа (для диагностики): $(head -c 20 ~/.ssh/deploy_key)"
+            exit 1
+          fi
 
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.REMOTE_SSH_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
+          echo "${{ secrets.REMOTE_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.REMOTE_HOST }} >> ~/.ssh/known_hosts
           
+          # Создаем конфиг SSH для упрощения отладки
+          cat > ~/.ssh/config << EOF
+          Host deployment
+            HostName ${{ secrets.REMOTE_HOST }}
+            User ${{ secrets.REMOTE_USER }}
+            IdentityFile ~/.ssh/deploy_key
+            StrictHostKeyChecking no
+            IdentitiesOnly yes
+            LogLevel DEBUG3
+          EOF
+          chmod 600 ~/.ssh/config
+          
           echo "Тестирование SSH-соединения:"
-          ssh -v -i ~/.ssh/id_rsa ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "echo 'Соединение успешно! Текущий каталог:' && pwd"
+          ssh -v deployment "echo 'Соединение успешно! Текущий каталог:' && pwd"
 
       - name: Deploy to server
         run: |
-          if ssh -i ~/.ssh/id_rsa ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "echo 'Hello world!'"; then
+          if ssh deployment "echo 'Hello world!'"; then
             echo "SSH connection successful, continuing with deployment"
             
-            ssh -i ~/.ssh/id_rsa ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "cd ~/cloud-services-engineer-kittygram-final/ && \
+            ssh deployment "cd ~/cloud-services-engineer-kittygram-final/ && \
               echo 'POSTGRES_USER=${{ secrets.POSTGRES_USER }}' > .env && \
               echo 'POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}' >> .env && \
               echo 'POSTGRES_DB=${{ secrets.POSTGRES_DB }}' >> .env && \
@@ -117,9 +147,9 @@ jobs:
               echo 'DEBUG=${{ secrets.DEBUG }}' >> .env && \
               echo 'ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}' >> .env"
             
-            scp -i ~/.ssh/id_rsa docker-compose.production.yml ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:~/cloud-services-engineer-kittygram-final/docker-compose.production.yml
+            scp -i ~/.ssh/deploy_key docker-compose.production.yml ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:~/cloud-services-engineer-kittygram-final/docker-compose.production.yml
             
-            ssh -i ~/.ssh/id_rsa ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "cd ~/cloud-services-engineer-kittygram-final/ && \
+            ssh deployment "cd ~/cloud-services-engineer-kittygram-final/ && \
               docker-compose -f docker-compose.production.yml pull && \
               docker-compose -f docker-compose.production.yml up -d --remove-orphans && \
               docker-compose -f docker-compose.production.yml exec -T backend python manage.py migrate && \
