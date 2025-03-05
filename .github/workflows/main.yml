@@ -85,97 +85,62 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Print debug info
-        run: |
-          echo "DEBUG: Preparing to deploy with SSH"
-          echo "Host: ${{ secrets.REMOTE_HOST }}"
-          echo "User: ${{ secrets.REMOTE_USER }}"
-          echo "Key length check: ${{ secrets.REMOTE_SSH_KEY != '' && 'OK' || 'EMPTY' }}"
-          
-      - name: Check SSH key format
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.REMOTE_SSH_KEY }}" | base64 -d > ~/.ssh/deploy_key 2>/dev/null || { echo "❌ Ошибка декодирования Base64"; exit 1; }
-          chmod 600 ~/.ssh/deploy_key
-          
-          # Проверка длины файла
-          FILE_SIZE=$(wc -c < ~/.ssh/deploy_key)
-          echo "Размер файла ключа: $FILE_SIZE байт"
-          
-          # Проверка формата ключа с выводом всего содержимого для отладки
-          echo "Проверка формата SSH-ключа:"
-          echo "--- Начало содержимого ключа (первые 50 символов) ---"
-          head -c 50 ~/.ssh/deploy_key | cat -A
-          echo
-          echo "--- Конец содержимого ---"
-          
-          if grep -q "BEGIN OPENSSH PRIVATE KEY" ~/.ssh/deploy_key && grep -q "END OPENSSH PRIVATE KEY" ~/.ssh/deploy_key; then
-            echo "✅ Ключ имеет правильный формат OpenSSH"
-          elif grep -q "BEGIN RSA PRIVATE KEY" ~/.ssh/deploy_key && grep -q "END RSA PRIVATE KEY" ~/.ssh/deploy_key; then
-            echo "✅ Ключ имеет правильный формат RSA"
-          else
-            echo "❌ Ключ имеет неправильный формат, проверьте секрет REMOTE_SSH_KEY"
-            exit 1
-          fi
-
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.REMOTE_SSH_KEY }}" | base64 -d > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.REMOTE_HOST }} >> ~/.ssh/known_hosts
-          
-          # Выводим информацию о ключе для отладки
-          echo "Информация о ключе:"
-          ssh-keygen -l -f ~/.ssh/deploy_key
-          
-          # Проверяем OS и версию SSH
-          echo "Версия SSH:"
-          ssh -V
-          echo "Операционная система:"
-          uname -a
-          
-          # Базовое тестирование с подробным выводом ошибок
-          echo "Тестирование SSH-соединения:"
-          ssh -v -o UserKnownHostsFile=~/.ssh/known_hosts -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "echo 'Соединение успешно!'" || { 
-            echo "⚠️ SSH connection failed. Retrying with more debug info:"; 
-            ssh -vvv -o UserKnownHostsFile=~/.ssh/known_hosts -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "echo test";
-          }
 
       - name: Deploy to server
         run: |
-          # Определение переменных для удобства
+          
           SSH_KEY="~/.ssh/deploy_key"
           SSH_CMD="ssh -i $SSH_KEY -o StrictHostKeyChecking=no ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}"
           SCP_CMD="scp -i $SSH_KEY -o StrictHostKeyChecking=no"
           
-          # Тестовое подключение
-          if $SSH_CMD "echo 'Hello world!'"; then
-            echo "SSH connection successful, continuing with deployment"
-            
-            # Создание .env файла
-            $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && \
-              echo 'POSTGRES_USER=${{ secrets.POSTGRES_USER }}' > .env && \
-              echo 'POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}' >> .env && \
-              echo 'POSTGRES_DB=${{ secrets.POSTGRES_DB }}' >> .env && \
-              echo 'DB_HOST=${{ secrets.DB_HOST }}' >> .env && \
-              echo 'DB_PORT=${{ secrets.DB_PORT }}' >> .env && \
-              echo 'SECRET_KEY=${{ secrets.SECRET_KEY }}' >> .env && \
-              echo 'DEBUG=${{ secrets.DEBUG }}' >> .env && \
-              echo 'ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}' >> .env"
-            
-            # Копирование файла docker-compose
-            $SCP_CMD docker-compose.production.yml ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:~/cloud-services-engineer-kittygram-final/docker-compose.production.yml
-            
-            # Запуск Docker Compose
-            $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && \
-              docker-compose -f docker-compose.production.yml pull && \
-              docker-compose -f docker-compose.production.yml up -d --remove-orphans && \
-              docker-compose -f docker-compose.production.yml exec -T backend python manage.py migrate && \
-              docker-compose -f docker-compose.production.yml exec -T backend python manage.py collectstatic --noinput"
+          $SSH_CMD "if ! command -v docker &> /dev/null; then
+            echo 'Docker не установлен. Устанавливаем...'
+            sudo apt-get update
+            sudo apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
+            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+            echo \"deb [arch=\$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \$(lsb_release -cs) stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+            sudo apt-get update
+            sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+            sudo usermod -aG docker \$USER
+            echo 'Docker установлен успешно'
           else
-            echo "SSH connection failed"
-            exit 1
+            echo 'Docker уже установлен'
+          fi"
+          
+          $SSH_CMD "if ! command -v docker-compose &> /dev/null; then
+            echo 'Docker Compose не установлен. Устанавливаем...'
+            sudo curl -L \"https://github.com/docker/compose/releases/download/1.29.2/docker-compose-\$(uname -s)-\$(uname -m)\" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+            echo 'Docker Compose установлен успешно'
+          else
+            echo 'Docker Compose уже установлен'
+          fi"
+          
+          $SSH_CMD "mkdir -p ~/cloud-services-engineer-kittygram-final/"
+          
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && \
+            echo 'POSTGRES_USER=${{ secrets.POSTGRES_USER }}' > .env && \
+            echo 'POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}' >> .env && \
+            echo 'POSTGRES_DB=${{ secrets.POSTGRES_DB }}' >> .env && \
+            echo 'DB_HOST=${{ secrets.DB_HOST }}' >> .env && \
+            echo 'DB_PORT=${{ secrets.DB_PORT }}' >> .env && \
+            echo 'SECRET_KEY=${{ secrets.SECRET_KEY }}' >> .env && \
+            echo 'DEBUG=${{ secrets.DEBUG }}' >> .env && \
+            echo 'ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}' >> .env"
+          
+          $SCP_CMD docker-compose.production.yml ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:~/cloud-services-engineer-kittygram-final/docker-compose.production.yml
+          
+          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && \
+            sudo docker-compose -f docker-compose.production.yml pull && \
+            sudo docker-compose -f docker-compose.production.yml up -d --remove-orphans && \
+            sudo docker-compose -f docker-compose.production.yml exec -T backend python manage.py migrate && \
+            sudo docker-compose -f docker-compose.production.yml exec -T backend python manage.py collectstatic --noinput"
 
   notify:
     runs-on: ubuntu-latest
