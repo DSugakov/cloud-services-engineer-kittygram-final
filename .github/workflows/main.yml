@@ -88,6 +88,9 @@ jobs:
           host: ${{ secrets.REMOTE_HOST }}
           username: ${{ secrets.REMOTE_USER }}
           key: ${{ secrets.REMOTE_SSH_KEY }}
+          port: 22
+          script_stop: true
+          debug: true
           script: |
             cd ~/cloud-services-engineer-kittygram-final/
             
