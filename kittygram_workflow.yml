@@ -62,8 +62,8 @@ jobs:
           context: ./backend/
           push: true
           tags: |
-            ${{ secrets.USER }}/kittygram_backend:latest
-            ${{ secrets.USER }}/kittygram_backend:build-${{ github.run_number }}
+            ${{ secrets.DOCKER_USERNAME }}/kittygram_backend:latest
+            ${{ secrets.DOCKER_USERNAME }}/kittygram_backend:build-${{ github.run_number }}
 
   frontend_tests:
     runs-on: ubuntu-latest
@@ -102,8 +102,8 @@ jobs:
           context: ./frontend
           push: true
           tags: |
-            ${{ secrets.USER }}/kittygram_frontend:latest
-            ${{ secrets.USER }}/kittygram_frontend:build-${{ github.run_number }}
+            ${{ secrets.DOCKER_USERNAME }}/kittygram_frontend:latest
+            ${{ secrets.DOCKER_USERNAME }}/kittygram_frontend:build-${{ github.run_number }}
 
   build_gateway_and_push_to_docker_hub:
     name: Push gateway Docker image to DockerHub
@@ -124,8 +124,8 @@ jobs:
           context: ./nginx/
           push: true
           tags: |
-            ${{ secrets.USER }}/kittygram_gateway:latest
-            ${{ secrets.USER }}/kittygram_gateway:build-${{ github.run_number }}
+            ${{ secrets.DOCKER_USERNAME }}/kittygram_gateway:latest
+            ${{ secrets.DOCKER_USERNAME }}/kittygram_gateway:build-${{ github.run_number }}
 
   deploy:
     runs-on: ubuntu-latest
@@ -141,6 +141,17 @@ jobs:
           echo "BUILD_ID=${{ github.run_number }}" > .build_info
           echo "COMMIT=${{ github.sha }}" >> .build_info
           echo "DEPLOY_DATE=$(date)" >> .build_info
+      - name: Create .env file
+        run: |
+          echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" > .env
+          echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
+          echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> .env
+          echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
+          echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
+          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
+          echo "DEBUG=${{ secrets.DEBUG }}" >> .env
+          echo "ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}" >> .env
+          echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> .env
       - name: Copy files via ssh
         uses: appleboy/scp-action@master
         with:
@@ -148,7 +159,7 @@ jobs:
           username: ${{ secrets.USER }}
           key: ${{ secrets.SSH_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          source: "docker-compose.production.yml,.build_info"
+          source: "docker-compose.production.yml,.build_info,.env"
           target: "/home/kittygram"
       - name: Executing remote ssh commands to deploy
         uses: appleboy/ssh-action@master

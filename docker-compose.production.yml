@@ -13,7 +13,7 @@ services:
     restart: always
 
   backend:
-    image: dsugakov/kittygram_backend:latest
+    image: ${DOCKER_USERNAME}/kittygram_backend:latest
     container_name: backend
     depends_on:
       - postgres
@@ -30,14 +30,14 @@ services:
     restart: always
 
   frontend:
-    image: dsugakov/kittygram_frontend:latest
+    image: ${DOCKER_USERNAME}/kittygram_frontend:latest
     container_name: frontend
     volumes:
       - frontend_static:/app/build/static
     restart: always
 
   gateway:
-    image: dsugakov/kittygram_gateway:latest
+    image: ${DOCKER_USERNAME}/kittygram_gateway:latest
     container_name: gateway
     ports:
       - "80:80"
