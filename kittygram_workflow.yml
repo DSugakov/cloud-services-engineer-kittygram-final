@@ -200,10 +200,4 @@ jobs:
         with:
           to: ${{ secrets.TELEGRAM_TO }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
-          message: |
-            🚀 Деплой проекта "cloud-services-engineer-kittygram-final" успешно завершен!
-            
-            Сборка: #${{ github.run_number }}
-            Пользователь: ${{ github.actor }}
-            Коммит: ${{ github.event.commits[0].message }}
-            Ссылка на коммит: https://github.com/${{ github.repository }}/commit/${{ github.sha }}
+          message: "OK"
