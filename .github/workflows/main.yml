@@ -97,83 +97,60 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up SSH key
-        uses: webfactory/ssh-agent@v0.9.0
+      - name: Deploy to server via SSH
+        uses: appleboy/ssh-action@master
         with:
-          ssh-private-key: ${{ secrets.REMOTE_SSH_KEY }}
-
-      - name: Add host key to known_hosts
-        run: |
-          ssh-keyscan -H ${{ secrets.REMOTE_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Test SSH connection
-        run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "echo 'SSH connection successful'"
-
-      - name: Deploy to server
-        run: |
-          # Создание переменных для SSH и SCP команд
-          SSH_CMD="ssh -o StrictHostKeyChecking=no ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}"
-          SCP_CMD="scp -o StrictHostKeyChecking=no"
-          
-          echo "Создание директории проекта..."
-          $SSH_CMD "mkdir -p ~/cloud-services-engineer-kittygram-final/"
-          echo "Директория создана"
-          
-          echo "Создание .env файла..."
-          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'POSTGRES_USER=${{ secrets.POSTGRES_USER }}' > .env"
-          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}' >> .env"
-          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'POSTGRES_DB=${{ secrets.POSTGRES_DB }}' >> .env"
-          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'DB_HOST=${{ secrets.DB_HOST }}' >> .env"
-          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'DB_PORT=${{ secrets.DB_PORT }}' >> .env"
-          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'SECRET_KEY=${{ secrets.SECRET_KEY }}' >> .env"
-          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'DEBUG=${{ secrets.DEBUG }}' >> .env"
-          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}' >> .env"
-          echo ".env файл создан"
-          
-          echo "Сохранение информации о версии..."
-          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'BUILD_ID=${{ github.run_number }}' > .build_info"
-          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && echo 'DEPLOY_DATE=$(date)' >> .build_info"
-          
-          echo "Копирование docker-compose.production.yml..."
-          $SCP_CMD docker-compose.production.yml ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:~/cloud-services-engineer-kittygram-final/docker-compose.production.yml
-          echo "Файл скопирован"
-          
-          echo "Запуск docker-compose pull..."
-          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml pull"
-          echo "Pull завершен"
-          
-          echo "Запуск контейнера postgres..."
-          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml up -d postgres"
-          echo "Postgres запущен"
-          
-          echo "Запуск контейнера backend..."
-          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml up -d backend"
-          echo "Backend запущен"
-          
-          echo "Запуск контейнера frontend..."
-          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml up -d frontend"
-          echo "Frontend запущен"
-          
-          echo "Запуск контейнера gateway..."
-          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml up -d gateway"
-          echo "Gateway запущен"
-          
-          echo "Применение миграций..."
-          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml exec -T backend python manage.py migrate"
-          echo "Миграции применены"
-          
-          echo "Сбор статики..."
-          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml exec -T backend python manage.py collectstatic --noinput"
-          echo "Статика собрана"
-          
-          echo "Очистка неиспользуемых Docker образов..."
-          $SSH_CMD "docker image prune -a -f --filter 'until=24h'"
-          echo "Очистка завершена"
-          
-          echo "Проверка статуса контейнеров..."
-          $SSH_CMD "cd ~/cloud-services-engineer-kittygram-final/ && docker-compose -f docker-compose.production.yml ps"
-          echo "Развертывание завершено успешно"
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.REMOTE_SSH_KEY }}
+          script: |
+            mkdir -p ~/cloud-services-engineer-kittygram-final/
+            echo "Директория создана"
+            
+            cd ~/cloud-services-engineer-kittygram-final/
+            
+            echo "Создание .env файла..."
+            echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" > .env
+            echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
+            echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> .env
+            echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
+            echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
+            echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
+            echo "DEBUG=${{ secrets.DEBUG }}" >> .env
+            echo "ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}" >> .env
+            echo ".env файл создан"
+            
+            echo "Сохранение информации о версии..."
+            echo "BUILD_ID=${{ github.run_number }}" > .build_info
+            echo "DEPLOY_DATE=$(date)" >> .build_info
+            
+            echo "Скачивание docker-compose.yml..."
+            curl -O https://raw.githubusercontent.com/${{ github.repository }}/main/docker-compose.production.yml
+            echo "Файл скачан"
+            
+            echo "Запуск docker-compose pull..."
+            docker-compose -f docker-compose.production.yml pull
+            echo "Pull завершен"
+            
+            echo "Запуск контейнеров..."
+            docker-compose -f docker-compose.production.yml up -d
+            echo "Контейнеры запущены"
+            
+            echo "Применение миграций..."
+            docker-compose -f docker-compose.production.yml exec -T backend python manage.py migrate
+            echo "Миграции применены"
+            
+            echo "Сбор статики..."
+            docker-compose -f docker-compose.production.yml exec -T backend python manage.py collectstatic --noinput
+            echo "Статика собрана"
+            
+            echo "Очистка неиспользуемых Docker образов..."
+            docker image prune -a -f --filter "until=24h"
+            echo "Очистка завершена"
+            
+            echo "Проверка статуса контейнеров..."
+            docker-compose -f docker-compose.production.yml ps
+            echo "Развертывание завершено успешно"
 
   notify:
     runs-on: ubuntu-latest
