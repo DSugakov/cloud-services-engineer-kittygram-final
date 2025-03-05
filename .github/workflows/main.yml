@@ -95,25 +95,33 @@ jobs:
       - name: Check SSH key format
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.REMOTE_SSH_KEY }}" > ~/.ssh/deploy_key
+          echo "${{ secrets.REMOTE_SSH_KEY }}" | base64 -d > ~/.ssh/deploy_key 2>/dev/null || { echo "❌ Ошибка декодирования Base64"; exit 1; }
           chmod 600 ~/.ssh/deploy_key
           
-          # Проверка формата ключа
+          # Проверка длины файла
+          FILE_SIZE=$(wc -c < ~/.ssh/deploy_key)
+          echo "Размер файла ключа: $FILE_SIZE байт"
+          
+          # Проверка формата ключа с выводом всего содержимого для отладки
           echo "Проверка формата SSH-ключа:"
+          echo "--- Начало содержимого ключа (первые 50 символов) ---"
+          head -c 50 ~/.ssh/deploy_key | cat -A
+          echo
+          echo "--- Конец содержимого ---"
+          
           if grep -q "BEGIN OPENSSH PRIVATE KEY" ~/.ssh/deploy_key && grep -q "END OPENSSH PRIVATE KEY" ~/.ssh/deploy_key; then
             echo "✅ Ключ имеет правильный формат OpenSSH"
           elif grep -q "BEGIN RSA PRIVATE KEY" ~/.ssh/deploy_key && grep -q "END RSA PRIVATE KEY" ~/.ssh/deploy_key; then
             echo "✅ Ключ имеет правильный формат RSA"
           else
             echo "❌ Ключ имеет неправильный формат, проверьте секрет REMOTE_SSH_KEY"
-            echo "Первые 20 символов ключа (для диагностики): $(head -c 20 ~/.ssh/deploy_key)"
             exit 1
           fi
 
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.REMOTE_SSH_KEY }}" > ~/.ssh/deploy_key
+          echo "${{ secrets.REMOTE_SSH_KEY }}" | base64 -d > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.REMOTE_HOST }} >> ~/.ssh/known_hosts
           
