@@ -1,4 +1,4 @@
-FROM node:18-alpine as build
+FROM node:18
 WORKDIR /app
 
 COPY package.json package.json
@@ -8,7 +8,6 @@ RUN npm ci
 
 COPY . .
 RUN npm run build
+RUN npm install --global http-server
 
-FROM nginx:1.19
-COPY --from=build /app/build /usr/share/nginx/html
-COPY nginx/default.conf /etc/nginx/conf.d/default.conf
+CMD ["npx", "-y", "http-server", "-p", "8000", "/app/build"]
