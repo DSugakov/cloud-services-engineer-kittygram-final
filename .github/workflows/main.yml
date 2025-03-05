@@ -150,25 +150,10 @@ jobs:
           echo "DEBUG=${{ secrets.DEBUG }}" >> .env
           echo "ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}" >> .env
           echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> .env
-      
-      - name: Install SSH key
-        uses: shimataro/ssh-key-action@v2
-        with:
-          key: ${{ secrets.REMOTE_SSH_KEY }}
-          name: id_rsa
-          known_hosts: ${{ secrets.REMOTE_HOST }}
-          if_key_exists: replace
-          
-      - name: Setup SSH and known_hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.REMOTE_HOST }} >> ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/id_rsa
-          echo "SSH ключ и known_hosts установлены."
-      
       - name: Copy files to server
         run: |
-          scp -v docker-compose.production.yml .build_info .env ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/home/kittygram/
+          # Копирование в директорию проекта
+          scp -v docker-compose.production.yml .build_info .env ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:~/cloud-services-engineer-kittygram-final/
           
       - name: Deploy on server
         run: |
@@ -180,7 +165,7 @@ jobs:
             sudo journalctl --vacuum-time=1d
             
             echo "Деплой приложения..."
-            cd /home/kittygram
+            cd ~/cloud-services-engineer-kittygram-final/
             sudo docker compose -f docker-compose.production.yml pull
             sudo docker compose -f docker-compose.production.yml down
             sudo docker compose -f docker-compose.production.yml up -d
@@ -205,9 +190,4 @@ jobs:
         with:
           to: ${{ secrets.TELEGRAM_TO }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
-          message: |
-            🚀 Деплой проекта "cloud-services-engineer-kittygram-final" успешно завершен!
-            
-            Сборка: #${{ github.run_number }}
-            Пользователь: ${{ github.actor }}
-            Ссылка на коммит: https://github.com/${{ github.repository }}/commit/${{ github.sha }}
+          message: "OK"

@@ -152,23 +152,14 @@ jobs:
           echo "DEBUG=${{ secrets.DEBUG }}" >> .env
           echo "ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}" >> .env
           echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> .env
-      - name: Copy files via ssh
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ secrets.REMOTE_HOST }}
-          username: ${{ secrets.REMOTE_USER }}
-          key: ${{ secrets.REMOTE_SSH_KEY }}
-          passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          source: "docker-compose.production.yml,.build_info,.env"
-          target: "/home/kittygram"
-      - name: Executing remote ssh commands to deploy
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.REMOTE_HOST }}
-          username: ${{ secrets.REMOTE_USER }}
-          key: ${{ secrets.REMOTE_SSH_KEY }}
-          passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          script: |
+      - name: Copy files to server
+        run: |
+          # Копирование в директорию проекта
+          scp -v docker-compose.production.yml .build_info .env ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:~/cloud-services-engineer-kittygram-final/
+          
+      - name: Deploy on server
+        run: |
+          ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} << 'EOF'
             echo "Очистка системы..."
             sudo docker system prune -af
             sudo npm cache clean --force
@@ -176,7 +167,7 @@ jobs:
             sudo journalctl --vacuum-time=1d
             
             echo "Деплой приложения..."
-            cd /home/kittygram
+            cd ~/cloud-services-engineer-kittygram-final/
             sudo docker compose -f docker-compose.production.yml pull
             sudo docker compose -f docker-compose.production.yml down
             sudo docker compose -f docker-compose.production.yml up -d
@@ -190,6 +181,7 @@ jobs:
             
             echo "Сохранение информации о сборке..."
             cat .build_info
+          EOF
 
   send_message:
     runs-on: ubuntu-latest
