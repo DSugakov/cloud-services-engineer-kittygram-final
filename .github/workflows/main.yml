@@ -194,4 +194,10 @@ jobs:
         with:
           to: ${{ secrets.TELEGRAM_TO }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
-          message: "Kittygram успешно развернут в продакшн. Сборка #${{ github.run_number }}"
+          message: |
+            🚀 Kittygram успешно развернут в продакшн!
+            
+            📋 Сборка: #${{ github.run_number }}
+            👤 Автор: ${{ github.actor }}
+            💬 Коммит: ${{ github.event.commits[0].message }}
+            🔗 Подробнее: https://github.com/${{ github.repository }}/commit/${{ github.sha }}
