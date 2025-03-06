@@ -12,6 +12,7 @@ fix_serializer.py
 fixed_serializer.py
 set_password.py
 stop_containers.sh
+index.html
 
 # Python кэш-файлы
 __pycache__/
