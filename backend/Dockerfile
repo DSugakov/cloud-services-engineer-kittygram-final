@@ -13,6 +13,7 @@ RUN gunicorn --version
 
 COPY . /app/
 
-RUN python manage.py collectstatic --noinput
+# Команда collectstatic перенесена в docker-compose.production.yml
 
+# Команда запуска также перенесена в docker-compose.production.yml
 CMD ["gunicorn", "kittygram_backend.wsgi:application", "--bind", "0.0.0.0:8000"]
