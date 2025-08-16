@@ -103,19 +103,19 @@ jobs:
             wget https://raw.githubusercontent.com/${{ github.repository }}/main/docker-compose.production.yml -O docker-compose.production.yml
 
             # Обновляем образы и запускаем контейнеры
-            docker-compose -f docker-compose.production.yml pull
-            docker-compose -f docker-compose.production.yml down
-            docker-compose -f docker-compose.production.yml up -d --remove-orphans
+            docker compose -f docker-compose.production.yml pull
+            docker compose -f docker-compose.production.yml down
+            docker compose -f docker-compose.production.yml up -d --remove-orphans
 
             # Ожидаем запуск контейнеров
             sleep 30
 
             # Выполняем миграции и собираем статику
-            docker-compose -f docker-compose.production.yml exec -T backend python manage.py migrate
-            docker-compose -f docker-compose.production.yml exec -T backend python manage.py collectstatic --noinput
+            docker compose -f docker-compose.production.yml exec -T backend python manage.py migrate
+            docker compose -f docker-compose.production.yml exec -T backend python manage.py collectstatic --noinput
 
             # Показываем статус контейнеров
-            docker-compose -f docker-compose.production.yml ps
+            docker compose -f docker-compose.production.yml ps
 
   notify:
     runs-on: ubuntu-latest
