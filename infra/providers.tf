@@ -15,6 +15,10 @@ terraform {
 
     skip_region_validation      = true
     skip_credentials_validation = true
+    
+    # Правильные credentials для Yandex Object Storage
+    access_key = var.storage_access_key
+    secret_key = var.storage_secret_key
   }
 }
 
