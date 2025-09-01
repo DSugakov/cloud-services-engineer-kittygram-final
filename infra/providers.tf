@@ -9,16 +9,12 @@ terraform {
 
   backend "s3" {
     endpoint = "https://storage.yandexcloud.net"
-    bucket = "kittygram-terraform-state"
+    bucket = "kittygram-terraform-state-158160191213"
     region = "ru-central1"
     key    = "tf-state.tfstate"
 
     skip_region_validation      = true
     skip_credentials_validation = true
-    
-    # Правильные credentials для Yandex Object Storage
-    access_key = var.storage_access_key
-    secret_key = var.storage_secret_key
   }
 }
 
