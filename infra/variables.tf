@@ -44,6 +44,12 @@ variable "vm_disk_size" {
   default     = 20
 }
 
+variable "ssh_public_key" {
+  description = "SSH public key content"
+  type        = string
+  default     = ""
+}
+
 variable "ssh_public_key_path" {
   description = "Path to SSH public key"
   type        = string

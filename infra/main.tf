@@ -3,11 +3,6 @@ data "yandex_compute_image" "ubuntu" {
   family = var.vm_image_family
 }
 
-# Получение SSH ключа
-data "local_file" "ssh_public_key" {
-  filename = pathexpand(var.ssh_public_key_path)
-}
-
 # Облачная сеть (VPC)
 resource "yandex_vpc_network" "kittygram_network" {
   name        = "kittygram-network"
@@ -74,7 +69,7 @@ resource "yandex_vpc_security_group" "kittygram_sg" {
 # Cloud-init конфигурация
 locals {
   cloud_init_config = templatefile("${path.module}/cloud-init.yml", {
-    ssh_public_key = trimspace(data.local_file.ssh_public_key.content)
+    ssh_public_key = var.ssh_public_key != "" ? var.ssh_public_key : file(pathexpand(var.ssh_public_key_path))
   })
 }
 
@@ -117,5 +112,22 @@ resource "yandex_compute_instance" "kittygram_vm" {
   }
 }
 
-# S3 бакет для хранения Terraform state создается отдельно
-# Не включаем его в основную конфигурацию, так как он используется для backend 
+# S3 бакет для хранения Terraform state
+resource "yandex_storage_bucket" "terraform_state" {
+  bucket = "kittygram-terraform-state-158160191213"
+  access_key = var.storage_access_key
+  secret_key = var.storage_secret_key
+
+  versioning {
+    enabled = true
+  }
+
+  lifecycle_rule {
+    id      = "terraform-state-lifecycle"
+    enabled = true
+
+    noncurrent_version_expiration {
+      days = 30
+    }
+  }
+} 
