@@ -8,17 +8,13 @@ terraform {
   required_version = ">= 1.0"
 
   backend "s3" {
-    endpoints = {
-      s3 = "https://storage.yandexcloud.net"
-    }
+    endpoint = "https://storage.yandexcloud.net"
     bucket = "kittygram-terraform-state-158160191213"
     region = "ru-central1"
     key    = "tf-state.tfstate"
 
     skip_region_validation      = true
     skip_credentials_validation = true
-    skip_requesting_account_id  = true
-    skip_s3_checksum            = true
   }
 }
 
