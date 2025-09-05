@@ -37,51 +37,69 @@ jobs:
 
       - name: Create service account key file
         run: |
-          # Создаем key.json напрямую через Python для лучшей обработки управляющих символов
-          python3 -c "
+          # Создаем Python скрипт для обработки JSON
+          cat > create_key.py << 'EOF'
           import json
           import re
           import os
+          import sys
           
-          # Получаем содержимое секрета
-          secret_content = '''${{ secrets.YC_SERVICE_ACCOUNT_KEY_FILE }}'''
+          def create_key_file():
+              # Получаем содержимое секрета из переменной окружения
+              secret_content = os.environ.get('YC_SERVICE_ACCOUNT_KEY_FILE', '')
+              
+              if not secret_content:
+                  print('Ошибка: YC_SERVICE_ACCOUNT_KEY_FILE не установлен')
+                  sys.exit(1)
+              
+              print('Обрабатываем JSON секрет...')
+              print(f'Длина секрета: {len(secret_content)} символов')
+              
+              try:
+                  # Очищаем управляющие символы, кроме \n и \r
+                  cleaned_content = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', secret_content)
+                  
+                  # Парсим JSON
+                  data = json.loads(cleaned_content)
+                  
+                  # Исправляем \n в private_key (заменяем \\n на реальные переносы строк)
+                  if 'private_key' in data:
+                      data['private_key'] = re.sub(r'\\\\n', '\n', data['private_key'])
+                  
+                  # Сохраняем исправленный JSON
+                  with open('key.json', 'w') as f:
+                      json.dump(data, f, indent=2)
+                  
+                  print('JSON файл успешно создан')
+                  
+                  # Проверяем, что файл создан и содержит валидный JSON
+                  with open('key.json', 'r') as f:
+                      test_data = json.load(f)
+                  print(f'Проверка: файл содержит {len(test_data)} полей')
+                  
+              except json.JSONDecodeError as e:
+                  print(f'Ошибка парсинга JSON: {e}')
+                  print(f'Позиция ошибки: строка {e.lineno}, столбец {e.colno}')
+                  print(f'Проблемный фрагмент: {repr(cleaned_content[max(0, e.pos-50):e.pos+50])}')
+                  sys.exit(1)
+              except Exception as e:
+                  print(f'Неожиданная ошибка: {e}')
+                  sys.exit(1)
           
-          print('Обрабатываем JSON секрет...')
-          print(f'Длина секрета: {len(secret_content)} символов')
+          if __name__ == '__main__':
+              create_key_file()
+          EOF
           
-          try:
-              # Очищаем управляющие символы, кроме \n и \r
-              cleaned_content = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', secret_content)
-              
-              # Парсим JSON
-              data = json.loads(cleaned_content)
-              
-              # Исправляем \n в private_key (заменяем \\n на реальные переносы строк)
-              if 'private_key' in data:
-                  data['private_key'] = re.sub(r'\\\\n', '\n', data['private_key'])
-              
-              # Сохраняем исправленный JSON
-              with open('key.json', 'w') as f:
-                  json.dump(data, f, indent=2)
-              
-              print('JSON файл успешно создан')
-              
-              # Проверяем, что файл создан и содержит валидный JSON
-              with open('key.json', 'r') as f:
-                  test_data = json.load(f)
-              print(f'Проверка: файл содержит {len(test_data)} полей')
-              
-          except json.JSONDecodeError as e:
-              print(f'Ошибка парсинга JSON: {e}')
-              print(f'Позиция ошибки: строка {e.lineno}, столбец {e.colno}')
-              print(f'Проблемный фрагмент: {repr(cleaned_content[max(0, e.pos-50):e.pos+50])}')
-              raise
-          except Exception as e:
-              print(f'Неожиданная ошибка: {e}')
-              raise
-          "
+          # Запускаем Python скрипт
+          python3 create_key.py
           
+          # Устанавливаем права доступа
           chmod 600 key.json
+          
+          # Удаляем временный скрипт
+          rm create_key.py
+        env:
+          YC_SERVICE_ACCOUNT_KEY_FILE: ${{ secrets.YC_SERVICE_ACCOUNT_KEY_FILE }}
 
       - name: Terraform Init
         run: terraform init
