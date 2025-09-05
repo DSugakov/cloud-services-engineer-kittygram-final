@@ -59,6 +59,14 @@ jobs:
                   # Очищаем управляющие символы, кроме \n и \r
                   cleaned_content = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', secret_content)
                   
+                  # Дополнительная очистка: удаляем символы, которые могут нарушать JSON
+                  cleaned_content = re.sub(r'[^\x20-\x7E\n\r]', '', cleaned_content)
+                  
+                  # Исправляем возможные проблемы с кавычками и экранированием
+                  cleaned_content = cleaned_content.replace('\\"', '"').replace('\\n', '\\n')
+                  
+                  print(f'Очищенный контент (первые 200 символов): {repr(cleaned_content[:200])}')
+                  
                   # Парсим JSON
                   data = json.loads(cleaned_content)
                   
@@ -81,6 +89,29 @@ jobs:
                   print(f'Ошибка парсинга JSON: {e}')
                   print(f'Позиция ошибки: строка {e.lineno}, столбец {e.colno}')
                   print(f'Проблемный фрагмент: {repr(cleaned_content[max(0, e.pos-50):e.pos+50])}')
+                  
+                  # Дополнительная диагностика
+                  print(f'Символы вокруг ошибки:')
+                  start = max(0, e.pos-20)
+                  end = min(len(cleaned_content), e.pos+20)
+                  problem_area = cleaned_content[start:end]
+                  print(f'  {repr(problem_area)}')
+                  
+                  # Попробуем найти и исправить проблемные символы
+                  print('Попытка дополнительной очистки...')
+                  # Удаляем все символы, которые точно не должны быть в JSON
+                  ultra_cleaned = re.sub(r'[^\x20-\x7E\n\r\t]', '', cleaned_content)
+                  try:
+                      data = json.loads(ultra_cleaned)
+                      print('Успешно после дополнительной очистки!')
+                      # Сохраняем исправленный JSON
+                      with open('key.json', 'w') as f:
+                          json.dump(data, f, indent=2)
+                      print('JSON файл успешно создан после очистки')
+                      return
+                  except json.JSONDecodeError as e2:
+                      print(f'Дополнительная очистка не помогла: {e2}')
+                  
                   sys.exit(1)
               except Exception as e:
                   print(f'Неожиданная ошибка: {e}')
