@@ -40,6 +40,10 @@ jobs:
           cat > key.json <<'JSON'
           ${{ secrets.YC_SERVICE_ACCOUNT_KEY_FILE }}
           JSON
+          jq -r '.private_key' key.json | sed 's/\\n/\n/g' > private_key.tmp
+          jq --arg pk "$(cat private_key.tmp)" '.private_key = $pk' key.json > key_fixed.json
+          mv key_fixed.json key.json
+          rm -f private_key.tmp
           jq -e . key.json >/dev/null || {
             echo "Invalid JSON in key.json" >&2
             exit 1
