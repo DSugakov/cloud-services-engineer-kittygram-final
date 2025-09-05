@@ -37,10 +37,13 @@ jobs:
 
       - name: Create service account key file
         run: |
-          echo '${{ secrets.YC_SERVICE_ACCOUNT_KEY_FILE }}' > key.json
-          # Удаляем все лишние символы и форматируем JSON
-          cat key.json | jq . > key_formatted.json
-          mv key_formatted.json key.json
+          SA_KEY='${{ secrets.YC_SERVICE_ACCOUNT_KEY_FILE }}'
+          if echo "$SA_KEY" | head -c1 | grep -q '{'; then
+            printf '%s' "$SA_KEY" > key.json
+          else
+            echo "$SA_KEY" | base64 -d > key.json
+          fi
+          jq -e . key.json >/dev/null
           chmod 600 key.json
 
       - name: Terraform Init
