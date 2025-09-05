@@ -41,17 +41,25 @@ jobs:
           ${{ secrets.YC_SERVICE_ACCOUNT_KEY_FILE }}
           EOF
           
-          # Исправляем \n в private_key через Python (самый надежный способ)
+          # Исправляем JSON через Python (очищаем управляющие символы)
           python3 -c "
           import json
           import re
           
+          # Читаем файл как текст
           with open('key.json', 'r') as f:
-              data = json.load(f)
+              content = f.read()
+          
+          # Очищаем управляющие символы, кроме \n и \r
+          content = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', content)
+          
+          # Парсим JSON
+          data = json.loads(content)
           
           # Исправляем \n в private_key
           data['private_key'] = re.sub(r'\\\\n', '\n', data['private_key'])
           
+          # Сохраняем исправленный JSON
           with open('key.json', 'w') as f:
               json.dump(data, f)
           "
