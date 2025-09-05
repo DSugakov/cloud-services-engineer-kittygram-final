@@ -37,31 +37,48 @@ jobs:
 
       - name: Create service account key file
         run: |
-          cat > key.json <<'EOF'
-          ${{ secrets.YC_SERVICE_ACCOUNT_KEY_FILE }}
-          EOF
-          
-          # Исправляем JSON через Python (очищаем управляющие символы)
+          # Создаем key.json напрямую через Python для лучшей обработки управляющих символов
           python3 -c "
           import json
           import re
+          import os
           
-          # Читаем файл как текст
-          with open('key.json', 'r') as f:
-              content = f.read()
+          # Получаем содержимое секрета
+          secret_content = '''${{ secrets.YC_SERVICE_ACCOUNT_KEY_FILE }}'''
           
-          # Очищаем управляющие символы, кроме \n и \r
-          content = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', content)
+          print('Обрабатываем JSON секрет...')
+          print(f'Длина секрета: {len(secret_content)} символов')
           
-          # Парсим JSON
-          data = json.loads(content)
-          
-          # Исправляем \n в private_key
-          data['private_key'] = re.sub(r'\\\\n', '\n', data['private_key'])
-          
-          # Сохраняем исправленный JSON
-          with open('key.json', 'w') as f:
-              json.dump(data, f)
+          try:
+              # Очищаем управляющие символы, кроме \n и \r
+              cleaned_content = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', secret_content)
+              
+              # Парсим JSON
+              data = json.loads(cleaned_content)
+              
+              # Исправляем \n в private_key (заменяем \\n на реальные переносы строк)
+              if 'private_key' in data:
+                  data['private_key'] = re.sub(r'\\\\n', '\n', data['private_key'])
+              
+              # Сохраняем исправленный JSON
+              with open('key.json', 'w') as f:
+                  json.dump(data, f, indent=2)
+              
+              print('JSON файл успешно создан')
+              
+              # Проверяем, что файл создан и содержит валидный JSON
+              with open('key.json', 'r') as f:
+                  test_data = json.load(f)
+              print(f'Проверка: файл содержит {len(test_data)} полей')
+              
+          except json.JSONDecodeError as e:
+              print(f'Ошибка парсинга JSON: {e}')
+              print(f'Позиция ошибки: строка {e.lineno}, столбец {e.colno}')
+              print(f'Проблемный фрагмент: {repr(cleaned_content[max(0, e.pos-50):e.pos+50])}')
+              raise
+          except Exception as e:
+              print(f'Неожиданная ошибка: {e}')
+              raise
           "
           
           chmod 600 key.json
