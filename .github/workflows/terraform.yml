@@ -37,7 +37,9 @@ jobs:
 
       - name: Create service account key file
         run: |
-          echo '${{ secrets.YC_SERVICE_ACCOUNT_KEY_FILE }}' > key.json
+          cat > key.json <<'EOF'
+          ${{ secrets.YC_SERVICE_ACCOUNT_KEY_FILE }}
+          EOF
           chmod 600 key.json
 
       - name: Terraform Init
