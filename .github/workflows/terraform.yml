@@ -40,6 +40,22 @@ jobs:
           cat > key.json <<'EOF'
           ${{ secrets.YC_SERVICE_ACCOUNT_KEY_FILE }}
           EOF
+          
+          # Исправляем \n в private_key через Python (самый надежный способ)
+          python3 -c "
+          import json
+          import re
+          
+          with open('key.json', 'r') as f:
+              data = json.load(f)
+          
+          # Исправляем \n в private_key
+          data['private_key'] = re.sub(r'\\\\n', '\n', data['private_key'])
+          
+          with open('key.json', 'w') as f:
+              json.dump(data, f)
+          "
+          
           chmod 600 key.json
 
       - name: Terraform Init
