@@ -37,13 +37,20 @@ jobs:
 
       - name: Create service account key file
         run: |
-          SA_KEY='${{ secrets.YC_SERVICE_ACCOUNT_KEY_FILE }}'
-          if echo "$SA_KEY" | head -c1 | grep -q '{'; then
-            printf '%s' "$SA_KEY" > key.json
-          else
-            echo "$SA_KEY" | base64 -d > key.json
+          SA_KEY_B64='${{ secrets.YC_SERVICE_ACCOUNT_KEY_FILE_B64 }}'
+          if [ -z "$SA_KEY_B64" ]; then
+            echo "Secret YC_SERVICE_ACCOUNT_KEY_FILE_B64 is empty. Please provide base64 of key.json" >&2
+            exit 1
           fi
-          jq -e . key.json >/dev/null
+          echo "$SA_KEY_B64" | base64 -d > key.json 2>/dev/null || {
+            echo "Failed to decode base64. Ensure the secret contains base64-encoded key.json (single line)." >&2
+            exit 1
+          }
+          jq -e . key.json >/dev/null || {
+            echo "Invalid JSON in decoded key.json" >&2
+            cat key.json >&2 || true
+            exit 1
+          }
           chmod 600 key.json
 
       - name: Terraform Init
