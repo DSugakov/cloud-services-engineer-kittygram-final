@@ -69,7 +69,7 @@ resource "yandex_vpc_security_group" "kittygram_sg" {
 # Cloud-init конфигурация
 locals {
   cloud_init_config = templatefile("${path.module}/cloud-init.yml", {
-    ssh_public_key = var.ssh_public_key != "" ? var.ssh_public_key : file(pathexpand(var.ssh_public_key_path))
+    ssh_public_key = var.ssh_public_key
   })
 }
 
