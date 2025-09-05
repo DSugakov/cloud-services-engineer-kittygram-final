@@ -37,18 +37,11 @@ jobs:
 
       - name: Create service account key file
         run: |
-          SA_KEY_B64='${{ secrets.YC_SERVICE_ACCOUNT_KEY_FILE_B64 }}'
-          if [ -z "$SA_KEY_B64" ]; then
-            echo "Secret YC_SERVICE_ACCOUNT_KEY_FILE_B64 is empty. Please provide base64 of key.json" >&2
-            exit 1
-          fi
-          echo "$SA_KEY_B64" | base64 -d > key.json 2>/dev/null || {
-            echo "Failed to decode base64. Ensure the secret contains base64-encoded key.json (single line)." >&2
-            exit 1
-          }
+          cat > key.json <<'JSON'
+          ${{ secrets.YC_SERVICE_ACCOUNT_KEY_FILE }}
+          JSON
           jq -e . key.json >/dev/null || {
-            echo "Invalid JSON in decoded key.json" >&2
-            cat key.json >&2 || true
+            echo "Invalid JSON in key.json" >&2
             exit 1
           }
           chmod 600 key.json
