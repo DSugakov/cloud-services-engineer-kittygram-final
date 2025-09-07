@@ -112,22 +112,22 @@ resource "yandex_compute_instance" "kittygram_vm" {
   }
 }
 
-# S3 бакет для хранения Terraform state
-resource "yandex_storage_bucket" "terraform_state" {
-  bucket = "kittygram-terraform-state-158160191213"
-  access_key = var.storage_access_key
-  secret_key = var.storage_secret_key
-
-  versioning {
-    enabled = true
-  }
-
-  lifecycle_rule {
-    id      = "terraform-state-lifecycle"
-    enabled = true
-
-    noncurrent_version_expiration {
-      days = 30
-    }
-  }
-} 
+# S3 бакет для хранения Terraform state создан вручную
+# resource "yandex_storage_bucket" "terraform_state" {
+#   bucket = "kittygram-terraform-state-158160191213"
+#   access_key = var.storage_access_key
+#   secret_key = var.storage_secret_key
+#
+#   versioning {
+#     enabled = true
+#   }
+#
+#   lifecycle_rule {
+#     id      = "terraform-state-lifecycle"
+#     enabled = true
+#
+#     noncurrent_version_expiration {
+#       days = 30
+#     }
+#   }
+# } 
