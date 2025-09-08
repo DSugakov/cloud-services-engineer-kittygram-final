@@ -17,6 +17,7 @@ locals {
 
 # Подсеть
 resource "yandex_vpc_subnet" "kittygram_subnet" {
+  count          = var.existing_subnet_id == "" ? 1 : 0
   name           = "kittygram-subnet"
   description    = "Subnet for Kittygram application"
   zone           = var.default_zone
@@ -26,6 +27,7 @@ resource "yandex_vpc_subnet" "kittygram_subnet" {
 
 # Группа безопасности
 resource "yandex_vpc_security_group" "kittygram_sg" {
+  count       = var.existing_security_group_id == "" ? 1 : 0
   name        = "kittygram-security-group"
   description = "Security group for Kittygram application"
   network_id  = local.network_id
@@ -72,6 +74,12 @@ resource "yandex_vpc_security_group" "kittygram_sg" {
   }
 }
 
+# Выбор существующих/созданных ресурсов
+locals {
+  subnet_id = var.existing_subnet_id != "" ? var.existing_subnet_id : yandex_vpc_subnet.kittygram_subnet[0].id
+  sg_id     = var.existing_security_group_id != "" ? var.existing_security_group_id : yandex_vpc_security_group.kittygram_sg[0].id
+}
+
 # Cloud-init конфигурация
 locals {
   cloud_init_config = templatefile("${path.module}/cloud-init.yml", {
@@ -99,9 +107,9 @@ resource "yandex_compute_instance" "kittygram_vm" {
   }
 
   network_interface {
-    subnet_id          = yandex_vpc_subnet.kittygram_subnet.id
+    subnet_id          = local.subnet_id
     nat                = true
-    security_group_ids = [yandex_vpc_security_group.kittygram_sg.id]
+    security_group_ids = [local.sg_id]
   }
 
   metadata = {

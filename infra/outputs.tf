@@ -15,7 +15,7 @@ output "vm_fqdn" {
 
 output "security_group_id" {
   description = "ID of the security group"
-  value       = yandex_vpc_security_group.kittygram_sg.id
+  value       = var.existing_security_group_id != "" ? var.existing_security_group_id : yandex_vpc_security_group.kittygram_sg[0].id
 }
 
 output "network_id" {
@@ -25,7 +25,7 @@ output "network_id" {
 
 output "subnet_id" {
   description = "ID of the subnet"
-  value       = yandex_vpc_subnet.kittygram_subnet.id
+  value       = var.existing_subnet_id != "" ? var.existing_subnet_id : yandex_vpc_subnet.kittygram_subnet[0].id
 }
 
 output "kittygram_url" {

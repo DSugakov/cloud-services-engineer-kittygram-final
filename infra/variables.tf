@@ -62,6 +62,18 @@ variable "existing_network_id" {
   default     = ""
 }
 
+variable "existing_subnet_id" {
+  description = "Use existing subnet ID instead of creating a new one (optional)"
+  type        = string
+  default     = ""
+}
+
+variable "existing_security_group_id" {
+  description = "Use existing security group ID instead of creating a new one (optional)"
+  type        = string
+  default     = ""
+}
+
 variable "storage_access_key" {
   description = "Storage access key for S3 bucket"
   type        = string
