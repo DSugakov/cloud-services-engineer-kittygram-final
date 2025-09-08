@@ -56,6 +56,12 @@ variable "ssh_public_key_path" {
   default     = "~/.ssh/id_rsa.pub"
 }
 
+variable "existing_network_id" {
+  description = "Use existing VPC network ID instead of creating a new one (optional)"
+  type        = string
+  default     = ""
+}
+
 variable "storage_access_key" {
   description = "Storage access key for S3 bucket"
   type        = string

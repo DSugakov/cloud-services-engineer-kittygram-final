@@ -20,7 +20,7 @@ output "security_group_id" {
 
 output "network_id" {
   description = "ID of the VPC network"
-  value       = yandex_vpc_network.kittygram_network.id
+  value       = var.existing_network_id != "" ? var.existing_network_id : yandex_vpc_network.kittygram_network[0].id
 }
 
 output "subnet_id" {
