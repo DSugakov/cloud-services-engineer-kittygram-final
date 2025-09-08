@@ -33,7 +33,8 @@ output "kittygram_url" {
   value       = "http://${yandex_compute_instance.kittygram_vm.network_interface.0.nat_ip_address}:9000"
 }
 
-output "s3_bucket_name" {
-  description = "Name of the S3 bucket for Terraform state"
-  value       = yandex_storage_bucket.terraform_state.bucket
-} 
+# S3 bucket создан вручную, поэтому output закомментирован
+# output "s3_bucket_name" {
+#   description = "Name of the S3 bucket for Terraform state"
+#   value       = yandex_storage_bucket.terraform_state.bucket
+# } 
