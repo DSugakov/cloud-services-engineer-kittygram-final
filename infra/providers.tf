@@ -10,7 +10,7 @@ terraform {
 
   backend "s3" {
     endpoints = { s3 = "https://storage.yandexcloud.net" }
-    bucket    = "kittygram-tf-state-gorban"
+    bucket    = "kittygram-terraform-state-158160191213"
     region    = "ru-central1"
     key       = "tf-state.tfstate"
 

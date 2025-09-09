@@ -59,25 +59,33 @@
             rm -rf .terraform
             rm -f .terraform.lock.hcl
 
-        - name: Verify S3 bucket access
+        - name: Debug S3 access
           run: |
             # Установка AWS CLI для работы с Yandex Cloud S3
             pip install awscli
             
-            # Проверяем доступ к бакету
-            echo "Checking bucket access..."
+            echo "=== S3 Access Debug ==="
             echo "Using endpoint: https://storage.yandexcloud.net"
             echo "Using region: ru-central1"
-            echo "Bucket name: kittygram-tf-state-gorban"
+            echo "Bucket name: kittygram-terraform-state-158160191213"
+            echo "Access Key length: ${#AWS_ACCESS_KEY_ID}"
+            echo "Secret Key length: ${#AWS_SECRET_ACCESS_KEY}"
             
-            # Попробуем разные варианты проверки
-            echo "1. Listing bucket contents..."
-            aws s3 ls s3://kittygram-tf-state-gorban --endpoint-url https://storage.yandexcloud.net --region ru-central1
+            echo "=== Testing credentials ==="
+            # Проверим, работают ли credentials вообще
+            echo "1. Testing basic S3 access..."
+            aws s3 ls --endpoint-url https://storage.yandexcloud.net --region ru-central1 || echo "Failed to list buckets"
             
-            echo "2. Checking bucket location..."
-            aws s3api get-bucket-location --bucket kittygram-tf-state-gorban --endpoint-url https://storage.yandexcloud.net --region ru-central1
+            echo "2. Listing all available buckets..."
+            aws s3 ls --endpoint-url https://storage.yandexcloud.net --region ru-central1
             
-            echo "Bucket access verified"
+            echo "3. Testing specific bucket..."
+            aws s3 ls s3://kittygram-terraform-state-158160191213 --endpoint-url https://storage.yandexcloud.net --region ru-central1 || echo "Bucket not found or no access"
+            
+            echo "4. Testing bucket location..."
+            aws s3api get-bucket-location --bucket kittygram-terraform-state-158160191213 --endpoint-url https://storage.yandexcloud.net --region ru-central1 || echo "Cannot get bucket location"
+            
+            echo "=== Debug complete ==="
           env:
             AWS_ACCESS_KEY_ID: ${{ secrets.YC_STORAGE_ACCESS_KEY }}
             AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_STORAGE_SECRET_KEY }}
