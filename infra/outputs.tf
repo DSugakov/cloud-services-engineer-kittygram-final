@@ -30,7 +30,7 @@ output "subnet_id" {
 
 output "kittygram_url" {
   description = "URL to access Kittygram application"
-  value       = "http://${yandex_compute_instance.kittygram_vm.network_interface.0.nat_ip_address}:9000"
+  value       = "http://${local.vm_external_ip}:9000"
 }
 
 # S3 bucket создан вручную, поэтому output закомментирован
