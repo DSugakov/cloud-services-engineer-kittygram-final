@@ -7,14 +7,14 @@
 ### 1. Yandex Cloud секреты
 - `YC_CLOUD_ID` - ID вашего облака в Yandex Cloud
 - `YC_FOLDER_ID` - ID папки в облаке
-- `YC_SERVICE_ACCOUNT_KEY_FILE` - JSON ключ сервисного аккаунта
+- `YC_KEY_JSON` - JSON ключ сервисного аккаунта (в base64 формате)
 
 ### 2. Object Storage секреты
-- `YC_STORAGE_ACCESS_KEY` - Access Key для S3 бакета
-- `YC_STORAGE_SECRET_KEY` - Secret Key для S3 бакета
+- `YC_ACCESS_KEY` - Access Key для S3 бакета
+- `YC_SECRET_KEY` - Secret Key для S3 бакета
 
 ### 3. SSH ключ
-- `SSH_PUBLIC_KEY` - содержимое публичного SSH ключа (без имени файла)
+- `SSH_KEY` - содержимое публичного SSH ключа (без имени файла)
 
 ## Как добавить секреты
 
@@ -47,6 +47,9 @@ yc resource-manager folder add-access-binding <folder-id> \
 
 # Создание ключа
 yc iam key create --service-account-name terraform-sa -o key.json
+
+# Конвертация в base64 для GitHub секрета
+base64 -i key.json
 ```
 
 ### Object Storage ключи
