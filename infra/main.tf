@@ -3,10 +3,9 @@ data "yandex_compute_image" "ubuntu" {
   family = var.image_family
 }
 
-# Облачная сеть (VPC)
-resource "yandex_vpc_network" "kittygram_network" {
-  name        = "kittygram-network"
-  description = "Network for Kittygram application"
+# Используем существующую облачную сеть (VPC)
+data "yandex_vpc_network" "kittygram_network" {
+  name = "kittygram-network"
 }
 
 # Подсеть
@@ -14,7 +13,7 @@ resource "yandex_vpc_subnet" "kittygram_subnet" {
   name           = "kittygram-subnet"
   description    = "Subnet for Kittygram application"
   zone           = var.zone
-  network_id     = yandex_vpc_network.kittygram_network.id
+  network_id     = data.yandex_vpc_network.kittygram_network.id
   v4_cidr_blocks = ["192.168.10.0/24"]
 }
 
@@ -22,7 +21,7 @@ resource "yandex_vpc_subnet" "kittygram_subnet" {
 resource "yandex_vpc_security_group" "kittygram_sg" {
   name        = "kittygram-security-group"
   description = "Security group for Kittygram application"
-  network_id  = yandex_vpc_network.kittygram_network.id
+  network_id  = data.yandex_vpc_network.kittygram_network.id
 
   # Исходящий трафик - разрешен весь
   egress {
