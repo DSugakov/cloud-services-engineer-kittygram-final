@@ -24,7 +24,7 @@ terraform {
 }
 
 provider "yandex" {
-  service_account_key = var.service_account_key != "" ? var.service_account_key : null
+  service_account_key = var.service_account_key != "" ? base64decode(var.service_account_key) : null
   service_account_key_file = var.service_account_key == "" ? var.sa_key_file : null
   cloud_id                 = var.cloud_id
   folder_id                = var.folder_id
