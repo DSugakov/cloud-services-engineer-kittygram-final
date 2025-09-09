@@ -7,14 +7,14 @@
 ### 1. Yandex Cloud секреты
 - `YC_CLOUD_ID` - ID вашего облака в Yandex Cloud
 - `YC_FOLDER_ID` - ID папки в облаке
-- `YC_KEY_JSON` - JSON ключ сервисного аккаунта (в base64 формате)
+- `YC_SERVICE_ACCOUNT_KEY_FILE` - JSON ключ сервисного аккаунта (в base64 формате)
 
 ### 2. Object Storage секреты
-- `YC_ACCESS_KEY` - Access Key для S3 бакета
-- `YC_SECRET_KEY` - Secret Key для S3 бакета
+- `YC_STORAGE_ACCESS_KEY` - Access Key для S3 бакета
+- `YC_STORAGE_SECRET_KEY` - Secret Key для S3 бакета
 
 ### 3. SSH ключ
-- `SSH_KEY` - содержимое публичного SSH ключа (без имени файла)
+- `SSH_PUBLIC_KEY` - содержимое публичного SSH ключа (без имени файла)
 
 ## Как добавить секреты
 
@@ -71,7 +71,27 @@ cat ~/.ssh/id_rsa.pub
 
 После добавления всех секретов:
 1. Перейдите в раздел Actions
-2. Выберите workflow "Terraform Infrastructure"
+2. Выберите workflow "Terraform"
 3. Нажмите "Run workflow"
 4. Выберите действие "plan"
 5. Убедитесь, что workflow выполняется без ошибок
+
+## Отладка проблем
+
+Если возникают ошибки с аутентификацией:
+
+1. **Проверьте секреты** - в логах workflow будет показана длина каждого секрета:
+   - `ACCESS_KEY length: 0` означает, что секрет не настроен
+   - `ACCESS_KEY length: 20` означает, что секрет настроен правильно
+
+2. **Убедитесь, что секреты имеют правильные названия**:
+   - `YC_STORAGE_ACCESS_KEY` (Access Key для Object Storage)
+   - `YC_STORAGE_SECRET_KEY` (Secret Key для Object Storage)
+   - `YC_SERVICE_ACCOUNT_KEY_FILE` (в base64 формате)
+   - `YC_CLOUD_ID`
+   - `YC_FOLDER_ID`
+   - `SSH_PUBLIC_KEY`
+
+3. **Проверьте права доступа** сервисного аккаунта:
+   - Роль `editor` для папки
+   - Роль `storage.admin` для Object Storage

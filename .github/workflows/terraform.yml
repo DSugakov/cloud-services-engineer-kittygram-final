@@ -20,7 +20,7 @@
       env:
         TF_VAR_cloud_id: ${{ secrets.YC_CLOUD_ID }}
         TF_VAR_folder_id: ${{ secrets.YC_FOLDER_ID }}
-        TF_VAR_ssh_key: ${{ secrets.SSH_KEY }}
+        TF_VAR_ssh_key: ${{ secrets.SSH_PUBLIC_KEY }}
   
       steps:
         - name: Checkout code
@@ -29,52 +29,69 @@
         - name: Setup Terraform
           uses: hashicorp/setup-terraform@v2
           with:
-            terraform_version: 1.8.3
+            terraform_version: 1.10.1
+            terraform_wrapper: false
   
         - name: Set up Yandex Cloud service account key
           working-directory: ./infra
           run: |
-            echo "${{ secrets.YC_KEY_JSON }}" | base64 -d > ./authorized_key.json
+            echo "${{ secrets.YC_SERVICE_ACCOUNT_KEY_FILE }}" | base64 -d > ./authorized_key.json
   
+        - name: Debug secrets
+          run: |
+            echo "ACCESS_KEY is set: ${{ env.ACCESS_KEY != '' }}"
+            echo "SECRET_KEY is set: ${{ env.SECRET_KEY != '' }}"
+            echo "YC_CLOUD_ID is set: ${{ env.TF_VAR_cloud_id != '' }}"
+            echo "YC_FOLDER_ID is set: ${{ env.TF_VAR_folder_id != '' }}"
+            echo "SSH_PUBLIC_KEY is set: ${{ env.TF_VAR_ssh_key != '' }}"
+            echo "ACCESS_KEY length: ${#ACCESS_KEY}"
+            echo "SECRET_KEY length: ${#SECRET_KEY}"
+          env:
+            ACCESS_KEY: ${{ secrets.YC_STORAGE_ACCESS_KEY }}
+            SECRET_KEY: ${{ secrets.YC_STORAGE_SECRET_KEY }}
+            TF_VAR_cloud_id: ${{ secrets.YC_CLOUD_ID }}
+            TF_VAR_folder_id: ${{ secrets.YC_FOLDER_ID }}
+            TF_VAR_ssh_key: ${{ secrets.SSH_PUBLIC_KEY }}
+
         - name: Terraform Initialize
           working-directory: ./infra
           run: terraform init -backend-config="access_key=$ACCESS_KEY" -backend-config="secret_key=$SECRET_KEY"
           env:
-            ACCESS_KEY: ${{ secrets.YC_ACCESS_KEY }}
-            SECRET_KEY: ${{ secrets.YC_SECRET_KEY }}
+            ACCESS_KEY: ${{ secrets.YC_STORAGE_ACCESS_KEY }}
+            SECRET_KEY: ${{ secrets.YC_STORAGE_SECRET_KEY }}
             TF_VAR_cloud_id: ${{ secrets.YC_CLOUD_ID }}
             TF_VAR_folder_id: ${{ secrets.YC_FOLDER_ID }}
-            TF_VAR_ssh_key: ${{ secrets.SSH_KEY }}
+            TF_VAR_ssh_key: ${{ secrets.SSH_PUBLIC_KEY }}
   
         - name: Terraform Plan
           working-directory: ./infra
           if: ${{ github.event.inputs.action == 'plan' }}
           run: terraform plan
           env:
-            ACCESS_KEY: ${{ secrets.YC_ACCESS_KEY }}
-            SECRET_KEY: ${{ secrets.YC_SECRET_KEY }}
+            ACCESS_KEY: ${{ secrets.YC_STORAGE_ACCESS_KEY }}
+            SECRET_KEY: ${{ secrets.YC_STORAGE_SECRET_KEY }}
             TF_VAR_cloud_id: ${{ secrets.YC_CLOUD_ID }}
             TF_VAR_folder_id: ${{ secrets.YC_FOLDER_ID }}
-            TF_VAR_ssh_key: ${{ secrets.SSH_KEY }}
+            TF_VAR_ssh_key: ${{ secrets.SSH_PUBLIC_KEY }}
   
         - name: Terraform Apply
           working-directory: ./infra
           if: ${{ github.event.inputs.action == 'apply' }}
           run: terraform apply -auto-approve
           env:
-            ACCESS_KEY: ${{ secrets.YC_ACCESS_KEY }}
-            SECRET_KEY: ${{ secrets.YC_SECRET_KEY }}
+            ACCESS_KEY: ${{ secrets.YC_STORAGE_ACCESS_KEY }}
+            SECRET_KEY: ${{ secrets.YC_STORAGE_SECRET_KEY }}
             TF_VAR_cloud_id: ${{ secrets.YC_CLOUD_ID }}
             TF_VAR_folder_id: ${{ secrets.YC_FOLDER_ID }}
-            TF_VAR_ssh_key: ${{ secrets.SSH_KEY }}
+            TF_VAR_ssh_key: ${{ secrets.SSH_PUBLIC_KEY }}
   
         - name: Terraform Destroy
           working-directory: ./infra
           if: ${{ github.event.inputs.action == 'destroy' }}
           run: terraform destroy -auto-approve
           env:
-            ACCESS_KEY: ${{ secrets.YC_ACCESS_KEY }}
-            SECRET_KEY: ${{ secrets.YC_SECRET_KEY }}
+            ACCESS_KEY: ${{ secrets.YC_STORAGE_ACCESS_KEY }}
+            SECRET_KEY: ${{ secrets.YC_STORAGE_SECRET_KEY }}
             TF_VAR_cloud_id: ${{ secrets.YC_CLOUD_ID }}
             TF_VAR_folder_id: ${{ secrets.YC_FOLDER_ID }}
-            TF_VAR_ssh_key: ${{ secrets.SSH_KEY }}
+            TF_VAR_ssh_key: ${{ secrets.SSH_PUBLIC_KEY }}
