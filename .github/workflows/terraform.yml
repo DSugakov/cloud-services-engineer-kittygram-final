@@ -59,6 +59,29 @@
             rm -rf .terraform
             rm -f .terraform.lock.hcl
 
+        - name: Verify S3 bucket access
+          run: |
+            # Установка AWS CLI для работы с Yandex Cloud S3
+            pip install awscli
+            
+            # Проверяем доступ к бакету
+            echo "Checking bucket access..."
+            echo "Using endpoint: https://storage.yandexcloud.net"
+            echo "Using region: ru-central1"
+            echo "Bucket name: kittygram-tf-state-gorban"
+            
+            # Попробуем разные варианты проверки
+            echo "1. Listing bucket contents..."
+            aws s3 ls s3://kittygram-tf-state-gorban --endpoint-url https://storage.yandexcloud.net --region ru-central1
+            
+            echo "2. Checking bucket location..."
+            aws s3api get-bucket-location --bucket kittygram-tf-state-gorban --endpoint-url https://storage.yandexcloud.net --region ru-central1
+            
+            echo "Bucket access verified"
+          env:
+            AWS_ACCESS_KEY_ID: ${{ secrets.YC_STORAGE_ACCESS_KEY }}
+            AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_STORAGE_SECRET_KEY }}
+
         - name: Terraform Initialize
           working-directory: ./infra
           run: terraform init -backend-config="access_key=$ACCESS_KEY" -backend-config="secret_key=$SECRET_KEY"
