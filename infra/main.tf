@@ -32,8 +32,9 @@ resource "yandex_compute_instance" "kittygram_vm" {
   zone        = var.zone
 
   resources {
-    cores  = var.cores
-    memory = var.memory
+    cores         = var.cores
+    memory        = 4  # 4GB как в существующей ВМ
+    core_fraction = 100  # 100% как в существующей ВМ
   }
 
   boot_disk {
@@ -60,6 +61,6 @@ resource "yandex_compute_instance" "kittygram_vm" {
 
   labels = {
     project = "kittygram"
-    env     = var.environment
+    env     = "production"  # Как в существующей ВМ
   }
 }
