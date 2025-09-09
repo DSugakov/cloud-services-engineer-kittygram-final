@@ -8,61 +8,14 @@ data "yandex_vpc_network" "kittygram_network" {
   name = "kittygram-network"
 }
 
-# Подсеть
-resource "yandex_vpc_subnet" "kittygram_subnet" {
-  name           = "kittygram-subnet"
-  description    = "Subnet for Kittygram application"
-  zone           = var.zone
-  network_id     = data.yandex_vpc_network.kittygram_network.id
-  v4_cidr_blocks = ["192.168.10.0/24"]
+# Используем существующую подсеть
+data "yandex_vpc_subnet" "kittygram_subnet" {
+  name = "kittygram-subnet"
 }
 
-# Группа безопасности
-resource "yandex_vpc_security_group" "kittygram_sg" {
-  name        = "kittygram-security-group"
-  description = "Security group for Kittygram application"
-  network_id  = data.yandex_vpc_network.kittygram_network.id
-
-  # Исходящий трафик - разрешен весь
-  egress {
-    description    = "All outbound traffic"
-    protocol       = "ANY"
-    from_port      = 0
-    to_port        = 65535
-    v4_cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # SSH доступ
-  ingress {
-    description    = "SSH access"
-    protocol       = "TCP"
-    port           = 22
-    v4_cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # HTTP доступ к приложению (порт gateway)
-  ingress {
-    description    = "HTTP access to gateway"
-    protocol       = "TCP"
-    port           = 9000
-    v4_cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # HTTPS доступ (дополнительно)
-  ingress {
-    description    = "HTTPS access"
-    protocol       = "TCP"
-    port           = 443
-    v4_cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # HTTP доступ (дополнительно)
-  ingress {
-    description    = "HTTP access"
-    protocol       = "TCP"
-    port           = 80
-    v4_cidr_blocks = ["0.0.0.0/0"]
-  }
+# Используем существующую группу безопасности
+data "yandex_vpc_security_group" "kittygram_sg" {
+  name = "kittygram-security-group"
 }
 
 # Cloud-init конфигурация
@@ -92,9 +45,9 @@ resource "yandex_compute_instance" "kittygram_vm" {
   }
 
   network_interface {
-    subnet_id          = yandex_vpc_subnet.kittygram_subnet.id
+    subnet_id          = data.yandex_vpc_subnet.kittygram_subnet.id
     nat                = true
-    security_group_ids = [yandex_vpc_security_group.kittygram_sg.id]
+    security_group_ids = [data.yandex_vpc_security_group.kittygram_sg.id]
   }
 
   metadata = {
