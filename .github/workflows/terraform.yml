@@ -136,6 +136,54 @@ jobs:
         env:
           YC_SERVICE_ACCOUNT_KEY_FILE: ${{ secrets.YC_SERVICE_ACCOUNT_KEY_FILE }}
 
+      - name: Setup AWS CLI for Yandex Cloud Storage
+        run: |
+          echo "Установка AWS CLI..."
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install
+          aws --version
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.YC_STORAGE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_STORAGE_SECRET_KEY }}
+          AWS_DEFAULT_REGION: ru-central1
+          AWS_S3_FORCE_PATH_STYLE: 'true'
+
+      - name: Verify S3 Bucket Access
+        run: |
+          echo "Проверка доступа к S3 бакету..."
+          BUCKET_NAME="kittygram-terraform-state-158160191213"
+          ENDPOINT="https://storage.yandexcloud.net"
+          
+          echo "Настройки подключения:"
+          echo "  Bucket: $BUCKET_NAME"
+          echo "  Endpoint: $ENDPOINT"
+          echo "  Region: $AWS_DEFAULT_REGION"
+          echo "  Access Key: ${AWS_ACCESS_KEY_ID:0:8}..."
+          
+          # Проверяем доступ к бакету
+          if aws s3 ls "s3://$BUCKET_NAME" --endpoint-url="$ENDPOINT"; then
+            echo "✅ Доступ к бакету $BUCKET_NAME подтвержден"
+          else
+            echo "❌ Ошибка доступа к бакету $BUCKET_NAME"
+            echo ""
+            echo "Возможные причины:"
+            echo "1. Неправильные credentials (YC_STORAGE_ACCESS_KEY, YC_STORAGE_SECRET_KEY)"
+            echo "2. Сервисный аккаунт не имеет прав доступа к бакету"
+            echo "3. Бакет не существует или имеет другое имя"
+            echo ""
+            echo "Решение:"
+            echo "1. Проверьте настройки GitHub Secrets"
+            echo "2. Убедитесь, что сервисный аккаунт имеет роль storage.editor или storage.admin"
+            echo "3. Проверьте имя бакета в консоли Yandex Cloud"
+            exit 1
+          fi
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.YC_STORAGE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_STORAGE_SECRET_KEY }}
+          AWS_DEFAULT_REGION: ru-central1
+          AWS_S3_FORCE_PATH_STYLE: 'true'
+
       - name: Terraform Init
         run: |
           echo "Инициализация Terraform..."
@@ -211,4 +259,5 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          rm -f key.json 
+          rm -f key.json
+          rm -rf awscliv2.zip aws/ 

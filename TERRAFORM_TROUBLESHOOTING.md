@@ -64,6 +64,39 @@ backend "s3" {
 - `EXISTING_SECURITY_GROUP_ID` - ID существующей группы безопасности (опционально)
 - `EXISTING_INSTANCE_ID` - ID существующей ВМ (опционально)
 
+## Проблема: Access Denied для S3 Backend
+
+### Описание ошибки
+```
+Error refreshing state: AccessDenied: Access Denied
+status code: 403, request id: b28a0b41fa57df35, host id: 
+```
+
+### Причина
+У credentials нет прав доступа к существующему бакету `kittygram-terraform-state-158160191213`.
+
+### Решение
+
+#### Проверка прав доступа в GitHub Actions
+Workflow проверяет доступ к S3 бакету:
+1. Устанавливает AWS CLI
+2. Проверяет доступ к бакету `kittygram-terraform-state-158160191213`
+3. Выводит диагностическую информацию при ошибке доступа
+
+#### Настройка прав доступа в Yandex Cloud
+Убедитесь, что сервисный аккаунт имеет права доступа к бакету:
+1. Войдите в консоль Yandex Cloud
+2. Перейдите в Object Storage → Бакеты
+3. Выберите бакет `kittygram-terraform-state-158160191213`
+4. Перейдите в раздел "Права доступа"
+5. Добавьте сервисный аккаунт с ролью `storage.editor` или `storage.admin`
+
+#### Альтернативный вариант: Использование локального backend
+Если S3 бакет недоступен, используйте локальный backend:
+1. Переименуйте `providers-local.tf.example` в `providers.tf`
+2. Удалите оригинальный `providers.tf`
+3. Запустите `terraform init`
+
 ### Проверка решения
 После применения исправлений:
 1. Запустите workflow с action "apply"
