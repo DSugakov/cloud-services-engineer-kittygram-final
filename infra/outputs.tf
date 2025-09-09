@@ -1,16 +1,16 @@
 output "vm_external_ip" {
   description = "External IP address of the VM"
-  value       = yandex_compute_instance.kittygram_vm.network_interface.0.nat_ip_address
+  value       = local.vm_external_ip
 }
 
 output "vm_internal_ip" {
   description = "Internal IP address of the VM"
-  value       = yandex_compute_instance.kittygram_vm.network_interface.0.ip_address
+  value       = local.vm_internal_ip
 }
 
 output "vm_fqdn" {
   description = "Fully qualified domain name of the VM"
-  value       = yandex_compute_instance.kittygram_vm.fqdn
+  value       = local.vm_fqdn
 }
 
 output "security_group_id" {

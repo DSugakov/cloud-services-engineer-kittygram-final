@@ -21,6 +21,7 @@ env:
   TF_VAR_existing_network_id: ${{ secrets.EXISTING_NETWORK_ID }}
   TF_VAR_existing_subnet_id: ${{ secrets.EXISTING_SUBNET_ID }}
   TF_VAR_existing_security_group_id: ${{ secrets.EXISTING_SECURITY_GROUP_ID }}
+  TF_VAR_existing_instance_id: ${{ secrets.EXISTING_INSTANCE_ID }}
 
 jobs:
   terraform:

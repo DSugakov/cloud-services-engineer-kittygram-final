@@ -89,6 +89,7 @@ locals {
 
 # Виртуальная машина
 resource "yandex_compute_instance" "kittygram_vm" {
+  count       = var.existing_instance_id == "" ? 1 : 0
   name        = "kittygram-vm"
   description = "Virtual machine for Kittygram application"
   zone        = var.default_zone
@@ -124,6 +125,17 @@ resource "yandex_compute_instance" "kittygram_vm" {
     project = "kittygram"
     env     = "production"
   }
+}
+
+data "yandex_compute_instance" "existing_vm" {
+  count = var.existing_instance_id != "" ? 1 : 0
+  instance_id = var.existing_instance_id
+}
+
+locals {
+  vm_external_ip = var.existing_instance_id != "" ? data.yandex_compute_instance.existing_vm[0].network_interface[0].nat_ip_address : yandex_compute_instance.kittygram_vm[0].network_interface[0].nat_ip_address
+  vm_internal_ip = var.existing_instance_id != "" ? data.yandex_compute_instance.existing_vm[0].network_interface[0].ip_address     : yandex_compute_instance.kittygram_vm[0].network_interface[0].ip_address
+  vm_fqdn        = var.existing_instance_id != "" ? data.yandex_compute_instance.existing_vm[0].fqdn                                 : yandex_compute_instance.kittygram_vm[0].fqdn
 }
 
 # S3 бакет для хранения Terraform state создан вручную

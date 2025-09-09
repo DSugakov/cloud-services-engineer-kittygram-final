@@ -74,6 +74,12 @@ variable "existing_security_group_id" {
   default     = ""
 }
 
+variable "existing_instance_id" {
+  description = "Use existing compute instance ID instead of creating a new one (optional)"
+  type        = string
+  default     = ""
+}
+
 variable "storage_access_key" {
   description = "Storage access key for S3 bucket"
   type        = string
