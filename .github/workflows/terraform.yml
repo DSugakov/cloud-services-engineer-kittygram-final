@@ -36,10 +36,16 @@
           working-directory: ./infra
           run: |
             echo "Setting up service account key..."
-            echo "${{ secrets.YC_SERVICE_ACCOUNT_KEY_FILE }}" | base64 -d > ./authorized_key.json
+            echo "${{ secrets.YC_SERVICE_ACCOUNT_KEY_FILE }}" > ./authorized_key.json
             
             echo "Checking JSON key file..."
             echo "File size: $(wc -c < ./authorized_key.json) bytes"
+            
+            if [ ! -s ./authorized_key.json ]; then
+              echo "ERROR: authorized_key.json is empty!"
+              exit 1
+            fi
+            
             echo "First 200 characters:"
             head -c 200 ./authorized_key.json
             echo ""
@@ -51,6 +57,8 @@
             python3 -m json.tool ./authorized_key.json > /dev/null && echo "JSON is valid" || echo "JSON is invalid"
             
             echo "Key file setup complete"
+          env:
+            YC_SERVICE_ACCOUNT_KEY_FILE: ${{ secrets.YC_SERVICE_ACCOUNT_KEY_FILE }}
   
         - name: Debug secrets
           run: |
