@@ -25,13 +25,6 @@ variable "sa_key_file" {
   default     = "authorized_key.json"
 }
 
-variable "service_account_key" {
-  description = "Service account JSON key content (alternative to file)"
-  type        = string
-  default     = ""
-  sensitive   = true
-}
-
 variable "platform_id" {
   description = "Instance platform"
   type        = string

@@ -50,10 +50,6 @@
             echo "Validating JSON format..."
             python3 -m json.tool ./authorized_key.json > /dev/null && echo "JSON is valid" || echo "JSON is invalid"
             
-            echo "Setting up environment variable..."
-            # Используем base64 для безопасной передачи многострочного JSON
-            echo "TF_VAR_service_account_key=$(cat ./authorized_key.json | base64 -w 0)" >> $GITHUB_ENV
-            
             echo "Key file setup complete"
           env:
             YC_SERVICE_ACCOUNT_KEY_FILE: ${{ secrets.YC_SERVICE_ACCOUNT_KEY_FILE }}
