@@ -1,36 +1,28 @@
 # Получение данных о доступных зонах
 data "yandex_compute_image" "ubuntu" {
-  family = var.vm_image_family
+  family = var.image_family
 }
 
 # Облачная сеть (VPC)
 resource "yandex_vpc_network" "kittygram_network" {
-  count       = var.existing_network_id == "" ? 1 : 0
   name        = "kittygram-network"
   description = "Network for Kittygram application"
 }
 
-# Выбор network_id: используем существующую сеть, если указана, иначе — созданную
-locals {
-  network_id = var.existing_network_id != "" ? var.existing_network_id : yandex_vpc_network.kittygram_network[0].id
-}
-
 # Подсеть
 resource "yandex_vpc_subnet" "kittygram_subnet" {
-  count          = var.existing_subnet_id == "" ? 1 : 0
   name           = "kittygram-subnet"
   description    = "Subnet for Kittygram application"
-  zone           = var.default_zone
-  network_id     = local.network_id
+  zone           = var.zone
+  network_id     = yandex_vpc_network.kittygram_network.id
   v4_cidr_blocks = ["192.168.10.0/24"]
 }
 
 # Группа безопасности
 resource "yandex_vpc_security_group" "kittygram_sg" {
-  count       = var.existing_security_group_id == "" ? 1 : 0
   name        = "kittygram-security-group"
   description = "Security group for Kittygram application"
-  network_id  = local.network_id
+  network_id  = yandex_vpc_network.kittygram_network.id
 
   # Исходящий трафик - разрешен весь
   egress {
@@ -74,43 +66,36 @@ resource "yandex_vpc_security_group" "kittygram_sg" {
   }
 }
 
-# Выбор существующих/созданных ресурсов
-locals {
-  subnet_id = var.existing_subnet_id != "" ? var.existing_subnet_id : yandex_vpc_subnet.kittygram_subnet[0].id
-  sg_id     = var.existing_security_group_id != "" ? var.existing_security_group_id : yandex_vpc_security_group.kittygram_sg[0].id
-}
-
 # Cloud-init конфигурация
 locals {
   cloud_init_config = templatefile("${path.module}/cloud-init.yml", {
-    ssh_public_key = var.ssh_public_key
+    ssh_public_key = var.ssh_key
   })
 }
 
 # Виртуальная машина
 resource "yandex_compute_instance" "kittygram_vm" {
-  count       = var.existing_instance_id == "" ? 1 : 0
   name        = "kittygram-vm"
   description = "Virtual machine for Kittygram application"
-  zone        = var.default_zone
+  zone        = var.zone
 
   resources {
-    cores  = var.vm_cores
-    memory = var.vm_memory
+    cores  = var.cores
+    memory = var.memory
   }
 
   boot_disk {
     initialize_params {
       image_id = data.yandex_compute_image.ubuntu.id
-      size     = var.vm_disk_size
-      type     = "network-hdd"
+      size     = var.disk_size
+      type     = var.disk_type
     }
   }
 
   network_interface {
-    subnet_id          = local.subnet_id
+    subnet_id          = yandex_vpc_subnet.kittygram_subnet.id
     nat                = true
-    security_group_ids = [local.sg_id]
+    security_group_ids = [yandex_vpc_security_group.kittygram_sg.id]
   }
 
   metadata = {
@@ -123,37 +108,6 @@ resource "yandex_compute_instance" "kittygram_vm" {
 
   labels = {
     project = "kittygram"
-    env     = "production"
+    env     = var.environment
   }
 }
-
-data "yandex_compute_instance" "existing_vm" {
-  count = var.existing_instance_id != "" ? 1 : 0
-  instance_id = var.existing_instance_id
-}
-
-locals {
-  vm_external_ip = var.existing_instance_id != "" ? data.yandex_compute_instance.existing_vm[0].network_interface[0].nat_ip_address : yandex_compute_instance.kittygram_vm[0].network_interface[0].nat_ip_address
-  vm_internal_ip = var.existing_instance_id != "" ? data.yandex_compute_instance.existing_vm[0].network_interface[0].ip_address     : yandex_compute_instance.kittygram_vm[0].network_interface[0].ip_address
-  vm_fqdn        = var.existing_instance_id != "" ? data.yandex_compute_instance.existing_vm[0].fqdn                                 : yandex_compute_instance.kittygram_vm[0].fqdn
-}
-
-# S3 бакет для хранения Terraform state создан вручную
-# resource "yandex_storage_bucket" "terraform_state" {
-#   bucket = "kittygram-terraform-state-158160191213"
-#   access_key = var.storage_access_key
-#   secret_key = var.storage_secret_key
-#
-#   versioning {
-#     enabled = true
-#   }
-#
-#   lifecycle_rule {
-#     id      = "terraform-state-lifecycle"
-#     enabled = true
-#
-#     noncurrent_version_expiration {
-#       days = 30
-#     }
-#   }
-# } 

@@ -1,94 +1,84 @@
+variable "environment" {
+  description = "Deployment environment tag (e.g. prod, stage, dev)"
+  type        = string
+  default     = "prod"
+}
+
+variable "ssh_key" {
+  description = "Public SSH key to inject into the VM"
+  type        = string
+}
+
 variable "cloud_id" {
   description = "Yandex Cloud ID"
   type        = string
 }
 
 variable "folder_id" {
-  description = "Yandex Cloud Folder ID"
+  description = "Folder ID inside the cloud"
   type        = string
 }
 
-variable "service_account_key_file" {
-  description = "Path to service account key file"
+variable "sa_key_file" {
+  description = "Path to service-account JSON key generated in workflow"
   type        = string
-  default     = ""
+  default     = "authorized_key.json"
 }
 
-variable "default_zone" {
+variable "platform_id" {
+  description = "Instance platform"
+  type        = string
+  default     = "standard-v1"
+}
+
+variable "zone" {
   description = "Default availability zone"
   type        = string
   default     = "ru-central1-a"
 }
 
-variable "vm_image_family" {
-  description = "VM image family"
+variable "disk_type" {
+  description = "Boot disk type"
   type        = string
-  default     = "ubuntu-2404-lts"
+  default     = "network-hdd"
 }
 
-variable "vm_cores" {
-  description = "Number of CPU cores for VM"
-  type        = number
-  default     = 2
-}
-
-variable "vm_memory" {
-  description = "Memory size for VM in GB"
-  type        = number
-  default     = 4
-}
-
-variable "vm_disk_size" {
-  description = "Disk size for VM in GB"
+variable "disk_size" {
+  description = "Boot disk size in GiB"
   type        = number
   default     = 20
 }
 
-variable "ssh_public_key" {
-  description = "SSH public key content"
-  type        = string
-  default     = ""
+variable "cores" {
+  description = "Number of vCPUs"
+  type        = number
+  default     = 2
 }
 
-variable "ssh_public_key_path" {
-  description = "Path to SSH public key"
-  type        = string
-  default     = "~/.ssh/id_rsa.pub"
+variable "memory" {
+  description = "RAM in GiB"
+  type        = number
+  default     = 2
 }
 
-variable "existing_network_id" {
-  description = "Use existing VPC network ID instead of creating a new one (optional)"
-  type        = string
-  default     = ""
+variable "core_fraction" {
+  description = "Guaranteed CPU percentage"
+  type        = number
+  default     = 20
+  validation {
+    condition     = var.core_fraction == 5 || var.core_fraction == 20 || var.core_fraction == 50 || var.core_fraction == 100
+    error_message = "core_fraction must be 5, 20, 50 or 100."
+  }
 }
 
-variable "existing_subnet_id" {
-  description = "Use existing subnet ID instead of creating a new one (optional)"
-  type        = string
-  default     = ""
+variable "nat" {
+  description = "Whether to assign external IPv4 address"
+  type        = bool
+  default     = true
 }
 
-variable "existing_security_group_id" {
-  description = "Use existing security group ID instead of creating a new one (optional)"
+variable "image_family" {
+  description = "Image family to use for the VM"
   type        = string
-  default     = ""
+  default     = "ubuntu-2404-lts-oslogin"
 }
-
-variable "existing_instance_id" {
-  description = "Use existing compute instance ID instead of creating a new one (optional)"
-  type        = string
-  default     = ""
-}
-
-variable "storage_access_key" {
-  description = "Storage access key for S3 bucket"
-  type        = string
-  default     = ""
-}
-
-variable "storage_secret_key" {
-  description = "Storage secret key for S3 bucket"
-  type        = string
-  default     = ""
-  sensitive   = true
-} 
