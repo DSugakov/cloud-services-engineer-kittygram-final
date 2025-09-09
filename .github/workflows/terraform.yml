@@ -35,7 +35,22 @@
         - name: Set up Yandex Cloud service account key
           working-directory: ./infra
           run: |
+            echo "Setting up service account key..."
             echo "${{ secrets.YC_SERVICE_ACCOUNT_KEY_FILE }}" | base64 -d > ./authorized_key.json
+            
+            echo "Checking JSON key file..."
+            echo "File size: $(wc -c < ./authorized_key.json) bytes"
+            echo "First 200 characters:"
+            head -c 200 ./authorized_key.json
+            echo ""
+            echo "Last 200 characters:"
+            tail -c 200 ./authorized_key.json
+            echo ""
+            
+            echo "Validating JSON format..."
+            python3 -m json.tool ./authorized_key.json > /dev/null && echo "JSON is valid" || echo "JSON is invalid"
+            
+            echo "Key file setup complete"
   
         - name: Debug secrets
           run: |
