@@ -137,7 +137,10 @@ jobs:
           YC_SERVICE_ACCOUNT_KEY_FILE: ${{ secrets.YC_SERVICE_ACCOUNT_KEY_FILE }}
 
       - name: Terraform Init
-        run: terraform init
+        run: |
+          echo "Инициализация Terraform..."
+          terraform init -upgrade
+          echo "Terraform успешно инициализирован"
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.YC_STORAGE_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_STORAGE_SECRET_KEY }}
@@ -180,8 +183,15 @@ jobs:
       - name: Get outputs
         if: ${{ github.event.inputs.action == 'apply' }}
         run: |
+          echo "Получение outputs Terraform..."
           echo "VM External IP: $(terraform output -raw vm_external_ip)"
           echo "Kittygram URL: $(terraform output -raw kittygram_url)"
+          echo "Outputs успешно получены"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.YC_STORAGE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_STORAGE_SECRET_KEY }}
+          AWS_DEFAULT_REGION: ru-central1
+          AWS_S3_FORCE_PATH_STYLE: 'true'
 
       - name: Terraform Destroy
         if: ${{ github.event.inputs.action == 'destroy' }}
