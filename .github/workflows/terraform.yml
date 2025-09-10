@@ -116,6 +116,32 @@
             TF_VAR_cloud_id: ${{ secrets.YC_CLOUD_ID }}
             TF_VAR_folder_id: ${{ secrets.YC_FOLDER_ID }}
             TF_VAR_ssh_key: ${{ secrets.SSH_PUBLIC_KEY }}
+
+        - name: Import existing resources
+          working-directory: ./infra
+          if: ${{ github.event.inputs.action == 'apply' }}
+          run: |
+            echo "Importing existing resources into Terraform state..."
+            
+            # Import existing VM
+            terraform import yandex_compute_instance.kittygram_vm fhmi8e4gudufvf784d1p || echo "VM already imported or not found"
+            
+            # Import existing network
+            terraform import yandex_vpc_network.kittygram_network enp5p4rfk6j7np2qdakg || echo "Network already imported or not found"
+            
+            # Import existing subnet
+            terraform import yandex_vpc_subnet.kittygram_subnet e9bsdviu42pq9biel6kd || echo "Subnet already imported or not found"
+            
+            # Import existing security group
+            terraform import yandex_vpc_security_group.kittygram_sg enpjir5f5go2h5dqesc0 || echo "Security group already imported or not found"
+            
+            echo "Import completed"
+          env:
+            ACCESS_KEY: ${{ secrets.YC_STORAGE_ACCESS_KEY }}
+            SECRET_KEY: ${{ secrets.YC_STORAGE_SECRET_KEY }}
+            TF_VAR_cloud_id: ${{ secrets.YC_CLOUD_ID }}
+            TF_VAR_folder_id: ${{ secrets.YC_FOLDER_ID }}
+            TF_VAR_ssh_key: ${{ secrets.SSH_PUBLIC_KEY }}
   
         - name: Terraform Plan
           working-directory: ./infra
