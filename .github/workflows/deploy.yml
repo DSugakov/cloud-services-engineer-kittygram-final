@@ -153,6 +153,14 @@ jobs:
           echo "${{ secrets.REMOTE_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.REMOTE_HOST }} >> ~/.ssh/known_hosts
+      
+      - name: Prepare project dir on server
+        run: |
+          ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} << 'EOF'
+            sudo mkdir -p ~/cloud-services-engineer-kittygram-final/nginx
+            sudo chown -R "$USER:$USER" ~/cloud-services-engineer-kittygram-final
+            chmod -R u+rwX,go+rX ~/cloud-services-engineer-kittygram-final
+          EOF
           
       - name: Copy files to server
         run: |
