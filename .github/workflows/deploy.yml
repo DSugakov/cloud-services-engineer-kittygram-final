@@ -150,13 +150,26 @@ jobs:
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
-          # Разворачиваем base64 из секрета
-          echo "${{ secrets.REMOTE_SSH_KEY_B64 }}" | base64 -d > ~/.ssh/id_deploy
-          # Убираем возможные CR из конца строк (на всякий случай)
+          # Пишем секрет как есть и снимаем возможные CR в конце строк
+          printf '%s' "${{ secrets.REMOTE_SSH_KEY }}" | sed 's/\r$//' > ~/.ssh/id_deploy.raw
+          
+          # Если в секрете были экранированные \n, разворачиваем их в реальные переводы строк
+          if ! grep -q "BEGIN .*PRIVATE KEY" ~/.ssh/id_deploy.raw; then
+            printf '%s' "${{ secrets.REMOTE_SSH_KEY }}" | sed 's/\\n/\n/g; s/\r$//' > ~/.ssh/id_deploy.raw
+          fi
+          
+          # Финальный файл ключа
+          cp ~/.ssh/id_deploy.raw ~/.ssh/id_deploy
+          # Доп. нормализация CR (на всякий случай)
           tr -d '\r' < ~/.ssh/id_deploy > ~/.ssh/id_deploy.tmp && mv ~/.ssh/id_deploy.tmp ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
-          # Валидация ключа
-          ssh-keygen -y -f ~/.ssh/id_deploy >/dev/null
+          
+          # Ранняя проверка читаемости ключа (зашифрованный/битый ключ выявится здесь)
+          if ! ssh-keygen -y -f ~/.ssh/id_deploy >/dev/null 2>&1; then
+            echo "SSH key is encrypted (has passphrase) or malformed. Provide an unencrypted key secret or store base64." >&2
+            exit 1
+          fi
+          
           # Known hosts
           ssh-keyscan -H ${{ secrets.REMOTE_HOST }} >> ~/.ssh/known_hosts
           
