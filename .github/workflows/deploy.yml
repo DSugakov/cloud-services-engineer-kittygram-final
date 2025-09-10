@@ -156,7 +156,7 @@ jobs:
       
       - name: Prepare project dir on server
         run: |
-          ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} << 'EOF'
+          ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} << 'EOF'
             mkdir -p "$HOME/cloud-services-engineer-kittygram-final/nginx"
             chmod -R u+rwX,go+rX "$HOME/cloud-services-engineer-kittygram-final"
           EOF
@@ -164,12 +164,12 @@ jobs:
       - name: Copy files to server
         run: |
           # Копирование в директорию проекта
-          scp -v docker-compose.production.yml .build_info .env ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/home/${{ secrets.REMOTE_USER }}/cloud-services-engineer-kittygram-final/
-          tar -C nginx -czf - . | ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} 'tar -xzf - -C /home/${{ secrets.REMOTE_USER }}/cloud-services-engineer-kittygram-final/nginx/'
+          scp -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa -v docker-compose.production.yml .build_info .env ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/home/${{ secrets.REMOTE_USER }}/cloud-services-engineer-kittygram-final/
+          tar -C nginx -czf - . | ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} 'tar -xzf - -C /home/${{ secrets.REMOTE_USER }}/cloud-services-engineer-kittygram-final/nginx/'
           
       - name: Deploy on server
         run: |
-          ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} << 'EOF'
+          ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} << 'EOF'
             echo "Очистка системы..."
             sudo docker system prune -af
             sudo npm cache clean --force
