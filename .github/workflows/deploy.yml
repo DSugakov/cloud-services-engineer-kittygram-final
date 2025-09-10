@@ -165,8 +165,8 @@ jobs:
       - name: Copy files to server
         run: |
           # Копирование в директорию проекта
-          scp -v docker-compose.production.yml .build_info .env ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:~/cloud-services-engineer-kittygram-final/
-          scp -v -r nginx ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:~/cloud-services-engineer-kittygram-final/
+          scp -v docker-compose.production.yml .build_info .env ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/home/${{ secrets.REMOTE_USER }}/cloud-services-engineer-kittygram-final/
+          scp -v -r nginx/* ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/home/${{ secrets.REMOTE_USER }}/cloud-services-engineer-kittygram-final/nginx/
           
       - name: Deploy on server
         run: |
