@@ -150,12 +150,22 @@ jobs:
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
-          # Пишем ключ как есть (убираем CR), затем пробуем валидировать
-          printf '%s' "${{ secrets.REMOTE_SSH_KEY }}" | sed 's/\r$//' > ~/.ssh/id_deploy || true
-          # Если формат не валиден, пробуем base64 decode
-          if ! ssh-keygen -y -f ~/.ssh/id_deploy >/dev/null 2>&1; then
-            printf '%s' "${{ secrets.REMOTE_SSH_KEY }}" | base64 -d > ~/.ssh/id_deploy 2>/dev/null || true
+          # 1) Пишем ключ как есть (сняв CR)
+          printf '%s' "${{ secrets.REMOTE_SSH_KEY }}" | sed 's/\r$//' > ~/.ssh/id_deploy.raw
+          
+          # 2) Если в секрете были экранированные \n, разворачиваем их в реальные переводы строк
+          if ! grep -q "BEGIN .*PRIVATE KEY" ~/.ssh/id_deploy.raw; then
+            printf '%s' "${{ secrets.REMOTE_SSH_KEY }}" | sed 's/\\n/\n/g; s/\r$//' > ~/.ssh/id_deploy.raw
           fi
+          
+          # 3) Пробуем так, как есть
+          cp ~/.ssh/id_deploy.raw ~/.ssh/id_deploy
+          
+          # 4) Если всё ещё не валидно, пробуем base64 decode
+          if ! ssh-keygen -y -f ~/.ssh/id_deploy >/dev/null 2>&1; then
+            cat ~/.ssh/id_deploy.raw | base64 -d > ~/.ssh/id_deploy 2>/dev/null || true
+          fi
+          
           chmod 600 ~/.ssh/id_deploy
           ssh-keyscan -H ${{ secrets.REMOTE_HOST }} >> ~/.ssh/known_hosts
           # Отпечаток публичной части для сверки
