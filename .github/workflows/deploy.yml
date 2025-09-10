@@ -150,9 +150,15 @@ jobs:
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.REMOTE_SSH_KEY }}" > ~/.ssh/id_rsa
+          printf '%s' "${{ secrets.REMOTE_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.REMOTE_HOST }} >> ~/.ssh/known_hosts
+          # Выведем отпечаток публичного ключа для отладки
+          ssh-keygen -y -f ~/.ssh/id_rsa | ssh-keygen -lf - || true
+          
+      - name: Check SSH connectivity (debug)
+        run: |
+          ssh -vvv -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} true || exit 1
       
       - name: Prepare project dir on server
         run: |
