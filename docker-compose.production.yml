@@ -13,7 +13,7 @@ services:
     restart: always
 
   backend:
-    image: ${DOCKER_USERNAME}/kittygram_backend:latest
+    image: ${DOCKER_USERNAME}/kittygram_backend:${BUILD_ID}
     container_name: backend
     depends_on:
       - postgres
@@ -34,14 +34,14 @@ services:
                gunicorn kittygram_backend.wsgi:application --bind 0.0.0.0:8000"
 
   frontend:
-    image: ${DOCKER_USERNAME}/kittygram_frontend:latest
+    image: ${DOCKER_USERNAME}/kittygram_frontend:${BUILD_ID}
     container_name: frontend
     volumes:
       - frontend_dist:/app/build
     restart: always
 
   gateway:
-    image: ${DOCKER_USERNAME}/kittygram_gateway:latest
+    image: ${DOCKER_USERNAME}/kittygram_gateway:${BUILD_ID}
     container_name: gateway
     ports:
       - "80:80"
