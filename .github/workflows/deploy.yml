@@ -165,7 +165,8 @@ jobs:
             
             echo "Деплой приложения..."
             cd ~/cloud-services-engineer-kittygram-final/
-            sudo docker compose -f docker-compose.production.yml pull
+            echo "Принудительное обновление образов..."
+            sudo docker compose -f docker-compose.production.yml pull --no-cache
             sudo docker compose -f docker-compose.production.yml down
             sudo docker compose -f docker-compose.production.yml up -d
             
