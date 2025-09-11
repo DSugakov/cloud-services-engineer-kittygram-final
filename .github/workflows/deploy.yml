@@ -167,12 +167,8 @@ jobs:
             cd ~/cloud-services-engineer-kittygram-final/
             echo "Принудительное обновление образов..."
             sudo docker compose -f docker-compose.production.yml pull
-            echo "Очистка старых образов..."
-            sudo docker image prune -f
-            echo "Удаление контейнеров и volumes..."
-            sudo docker compose -f docker-compose.production.yml down -v
-            echo "Запуск с принудительной пересборкой..."
-            sudo docker compose -f docker-compose.production.yml up -d --force-recreate
+            sudo docker compose -f docker-compose.production.yml down
+            sudo docker compose -f docker-compose.production.yml up -d
             
             echo "Применение миграций и сбор статики..."
             sudo docker compose -f docker-compose.production.yml exec backend python manage.py migrate
