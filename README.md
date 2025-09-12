@@ -286,8 +286,8 @@ kittygram-final/
 ## 📞 Контакты
 
 - **Автор**: Denis Sugakov
-- **GitHub**: [@denissugakov](https://github.com/denissugakov)
-- **Проект**: [cloud-services-engineer-kittygram-final](https://github.com/denissugakov/cloud-services-engineer-kittygram-final)
+- **GitHub**: [@DSugakov](https://github.com/DSugakov)
+- **Проект**: [cloud-services-engineer-kittygram-final](https://github.com/DSugakov/cloud-services-engineer-kittygram-final)
 
 ---
 
