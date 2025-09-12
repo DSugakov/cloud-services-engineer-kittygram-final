@@ -153,6 +153,8 @@ jobs:
         run: |
           # Копирование в директорию проекта
           scp -v docker-compose.production.yml .build_info .env ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:~/cloud-services-engineer-kittygram-final/
+          ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} 'mkdir -p ~/cloud-services-engineer-kittygram-final/nginx'
+          scp -v nginx/default.conf ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:~/cloud-services-engineer-kittygram-final/nginx/default.conf
           
       - name: Deploy on server
         run: |
@@ -173,6 +175,13 @@ jobs:
             echo "Применение миграций и сбор статики..."
             sudo docker compose -f docker-compose.production.yml exec backend python manage.py migrate
             sudo docker compose -f docker-compose.production.yml exec backend python manage.py collectstatic --no-input
+
+            echo "Проверка gateway и HTTPS..."
+            sudo docker compose -f docker-compose.production.yml exec gateway nginx -t || { echo "Nginx config test failed"; exit 1; }
+            sudo docker compose -f docker-compose.production.yml exec gateway nginx -s reload || true
+            # Проверка с хоста, что 80/443 отвечают
+            curl -sI http://127.0.0.1 -m 5 | head -n1 || { echo "HTTP check failed"; exit 1; }
+            curl -skI https://127.0.0.1 -m 5 | head -n1 || { echo "HTTPS check failed"; sudo docker logs gateway --tail=200; exit 1; }
             
             echo "Проверка статуса контейнеров..."
             sudo docker compose -f docker-compose.production.yml ps
