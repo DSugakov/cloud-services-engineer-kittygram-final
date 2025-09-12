@@ -1,4 +1,3 @@
-repo_owner: your-github-username
-kittygram_domain: http://example.com:9000
-dockerhub_username: your-dockerhub-username
-
+repo_owner: DSugakov
+kittygram_domain: http://158.160.107.18:9000
+dockerhub_username: DSugakov
